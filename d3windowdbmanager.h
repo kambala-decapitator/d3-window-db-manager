@@ -1,0 +1,32 @@
+#ifndef D3WINDOWDBMANAGER_H
+#define D3WINDOWDBMANAGER_H
+
+#include <QMainWindow>
+
+#include <Windows.h>
+
+
+namespace Ui { class D3WindowDBManagerClass; }
+
+class D3WindowDBManager : public QMainWindow
+{
+    Q_OBJECT
+
+public:
+    D3WindowDBManager(QWidget *parent = 0);
+    virtual ~D3WindowDBManager();
+
+    void addWindow(HWND hwnd) { _windows << hwnd; }
+
+private slots:
+    void buildWindowList();
+    void flashSelectedWindow();
+    void windowsPerRowChanged(int windows);
+
+private:
+    Ui::D3WindowDBManagerClass *ui;
+
+    QList<HWND> _windows;
+};
+
+#endif // D3WINDOWDBMANAGER_H
