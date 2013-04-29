@@ -30,8 +30,8 @@
    <widget class="QComboBox" name="windowsComboBox">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>10</y>
+      <x>20</x>
+      <y>90</y>
       <width>101</width>
       <height>22</height>
      </rect>
@@ -40,33 +40,14 @@
    <widget class="QPushButton" name="flashWindowButton">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>10</y>
+      <x>130</x>
+      <y>90</y>
       <width>75</width>
       <height>23</height>
      </rect>
     </property>
     <property name="text">
      <string>flash window</string>
-    </property>
-   </widget>
-   <widget class="QSlider" name="windowsPerRowSlider">
-    <property name="geometry">
-     <rect>
-      <x>110</x>
-      <y>60</y>
-      <width>181</width>
-      <height>19</height>
-     </rect>
-    </property>
-    <property name="minimum">
-     <number>1</number>
-    </property>
-    <property name="maximum">
-     <number>10</number>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
     </property>
    </widget>
    <widget class="QLabel" name="label">
@@ -81,47 +62,63 @@
     <property name="text">
      <string>windows per row</string>
     </property>
-    <property name="buddy">
-     <cstring>windowsPerRowSlider</cstring>
-    </property>
    </widget>
-   <widget class="QLabel" name="windowsPerRowLabel">
+   <widget class="QPushButton" name="restoreButton">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>290</x>
+      <y>90</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>restore</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="shrinkButton">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>90</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>shrink</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="tileButton">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>10</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>tile</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="windowsPerRowSpinBox">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
       <y>60</y>
-      <width>15</width>
-      <height>13</height>
+      <width>42</width>
+      <height>22</height>
      </rect>
     </property>
-    <property name="text">
-     <string>1</string>
+    <property name="minimum">
+     <number>1</number>
     </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton">
-    <property name="geometry">
-     <rect>
-      <x>410</x>
-      <y>10</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
+    <property name="maximum">
+     <number>20</number>
     </property>
-    <property name="text">
-     <string>restore size</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_2">
-    <property name="geometry">
-     <rect>
-      <x>330</x>
-      <y>10</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>reduce size</string>
+    <property name="value">
+     <number>3</number>
     </property>
    </widget>
   </widget>

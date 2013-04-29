@@ -41,7 +41,8 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QMainWindow(parent), ui(
 
     connect(ui->buildWndListButton, SIGNAL(clicked()), SLOT(buildWindowList()));
     connect(ui->flashWindowButton,  SIGNAL(clicked()), SLOT(flashSelectedWindow()));
-    connect(ui->windowsPerRowSlider, SIGNAL(valueChanged(int)), SLOT(windowsPerRowChanged(int)));
+    connect(ui->shrinkButton,       SIGNAL(clicked()), SLOT(shrinkWindow()));
+    connect(ui->restoreButton,      SIGNAL(clicked()), SLOT(restoreWindowSize()));
 
     EnumWindowsHelper::d3WindowDBManager = this;
 }
@@ -56,6 +57,7 @@ void D3WindowDBManager::buildWindowList()
     _windows.clear();
     EnumWindowsHelper::startEnumWindows();
 
+    ui->windowsComboBox->clear();
     foreach (HWND hwnd, _windows)
     {
         WCHAR wndCaptionWstr[n];
@@ -68,9 +70,14 @@ void D3WindowDBManager::buildWindowList()
     }
 }
 
+void D3WindowDBManager::tileWindows()
+{
+
+}
+
 void D3WindowDBManager::flashSelectedWindow()
 {
-    HWND selectedWindow = _windows.at(ui->windowsComboBox->currentIndex());
+    HWND selectedWindow = currentWindow();
     ::FlashWindow(selectedWindow, TRUE); // flash the taskbar icon
 
     // draw a border around the window, credits: http://comp.newsgroups.archived.at/os.ms-windows.programmer.win32/200404/04043011017.html
@@ -98,7 +105,20 @@ void D3WindowDBManager::flashSelectedWindow()
     ReleaseDC(selectedWindow, hDC);
 }
 
-void D3WindowDBManager::windowsPerRowChanged(int windows)
+void D3WindowDBManager::shrinkWindow()
 {
-    ui->windowsPerRowLabel->setText(QString::number(windows));
+    int windowsPerRow = ui->windowsPerRowSpinBox->value(), windowIndex = ui->windowsComboBox->currentIndex();
+    int row = windowIndex / windowsPerRow, col = windowIndex % windowsPerRow;
+    int w = screenWidth() / windowsPerRow, h = screenHeight() / windowsPerRow;
+    ::MoveWindow(currentWindow(), col * w, row * h, w, h, FALSE);
+}
+
+void D3WindowDBManager::restoreWindowSize()
+{
+    ::SetWindowPos(currentWindow(), HWND_TOP, 0, 0, screenWidth(), screenHeight(), SWP_SHOWWINDOW);
+}
+
+HWND D3WindowDBManager::currentWindow()
+{
+    return _windows.at(ui->windowsComboBox->currentIndex());
 }

@@ -20,13 +20,19 @@ public:
 
 private slots:
     void buildWindowList();
+    void tileWindows();
     void flashSelectedWindow();
-    void windowsPerRowChanged(int windows);
+    void shrinkWindow();
+    void restoreWindowSize();
 
 private:
     Ui::D3WindowDBManagerClass *ui;
 
     QList<HWND> _windows;
+
+    HWND currentWindow();
+    int screenWidth()  const { return ::GetSystemMetrics(SM_CXSCREEN); }
+    int screenHeight() const { return ::GetSystemMetrics(SM_CYSCREEN); }
 };
 
 #endif // D3WINDOWDBMANAGER_H
