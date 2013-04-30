@@ -19,11 +19,17 @@ public:
     void addWindow(HWND hwnd) { _windows << hwnd; }
 
 private slots:
+    void startGame();
+    void startLauncher();
+
     void buildWindowList();
     void tileWindows();
+
     void flashSelectedWindow();
     void shrinkWindow();
     void restoreWindowSize();
+
+    void selectD3Path();
 
 private:
     Ui::D3WindowDBManagerClass *ui;
