@@ -1,15 +1,23 @@
 #include    "d3windowdbmanager.h"
 #include "ui_d3windowdbmanager.h"
+#include "addbotdialog.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDesktopServices>
 
 #include <QUrl>
-#include <QProcess>
+#include <QSettings>
+#include <QTimer>
 
 #ifndef QT_NO_DEBUG
 #include <QDebug>
+#endif
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#  define LPWSTR_TO_QSTRING(wstr) QString::fromUtf16(reinterpret_cast<const ushort *>(wstr))
+#else
+#  define LPWSTR_TO_QSTRING(wstr) QString::fromUtf16(wstr)
 #endif
 
 static const int n = 50;
@@ -22,8 +30,7 @@ public:
 
     static void startEnumWindows()
     {
-        BOOL b = ::EnumWindows(EnumWindowsProc, 0);
-        qDebug() << "EnumWindows result" << b;
+        ::EnumWindows(EnumWindowsProc, 0);
     }
 
 private:
@@ -42,9 +49,11 @@ private:
 D3WindowDBManager *EnumWindowsHelper::d3WindowDBManager;
 
 
+const QString D3WindowDBManager::kD3ExeName("Diablo III.exe");
+
 // D3WindowDBManager ctor/dtor
 
-D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QMainWindow(parent), ui(new Ui::D3WindowDBManagerClass)
+D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new Ui::D3WindowDBManagerClass)
 {
     ui->setupUi(this);
 
@@ -54,16 +63,22 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QMainWindow(parent), ui(
     connect(ui->buildWndListButton, SIGNAL(clicked()), SLOT(buildWindowList()));
     connect(ui->tileButton,         SIGNAL(clicked()), SLOT(tileWindows()));
 
-    connect(ui->flashWindowButton,  SIGNAL(clicked()), SLOT(flashSelectedWindow()));
-    connect(ui->shrinkButton,       SIGNAL(clicked()), SLOT(shrinkWindow()));
-    connect(ui->restoreButton,      SIGNAL(clicked()), SLOT(restoreWindowSize()));
+    connect(ui->highlightButton, SIGNAL(clicked()), SLOT(highlightWindow()));
+    connect(ui->shrinkButton,    SIGNAL(clicked()), SLOT(shrinkWindow()));
+    connect(ui->restoreButton,   SIGNAL(clicked()), SLOT(restoreWindowSize()));
 
     connect(ui->selectD3PathButton, SIGNAL(clicked()), SLOT(selectD3Path()));
+    connect(ui->selectDBPathButton, SIGNAL(clicked()), SLOT(selectDBPath()));
+
+    connect(ui->addBotButton, SIGNAL(clicked()), SLOT(addBot()));
+
+    connect(&_d3StarterProc, SIGNAL(readyReadStandardOutput()), SLOT(readD3StarterOutput()));
 
     EnumWindowsHelper::d3WindowDBManager = this;
     buildWindowList();
 
-    ui->d3PathLineEdit->setText("C:\\Diablo III");
+    QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
+    ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
 }
 
 D3WindowDBManager::~D3WindowDBManager()
@@ -76,13 +91,22 @@ D3WindowDBManager::~D3WindowDBManager()
 
 void D3WindowDBManager::startGame()
 {
-    QProcess *p = new QProcess(this);
-    p->start("D3Starter.exe", QStringList() << (ui->d3PathLineEdit->text() + QDir::separator() + "Diablo III.exe") << QString::number(ui->d3InstancesSpinBox->value()));
+    _d3StarterProc.start("D3Starter.exe", QStringList() << (d3Path() + kD3ExeName) << QString::number(ui->d3InstancesSpinBox->value()), QIODevice::ReadOnly);
+}
+
+void D3WindowDBManager::readD3StarterOutput()
+{
+    if (_d3StarterProc.readAllStandardOutput().contains("All done!"))
+    {
+        _d3StarterProc.close();
+
+        QTimer::singleShot(20000, this, SLOT(buildWindowList()));
+    }
 }
 
 void D3WindowDBManager::startLauncher()
 {
-    QDesktopServices::openUrl(QUrl::fromLocalFile(ui->d3PathLineEdit->text() + QDir::separator() + "Diablo III Launcher.exe"));
+    QDesktopServices::openUrl(QUrl::fromLocalFile(d3Path() + "Diablo III Launcher.exe"));
 }
 
 void D3WindowDBManager::buildWindowList()
@@ -99,7 +123,7 @@ void D3WindowDBManager::buildWindowList()
         DWORD pid;
         ::GetWindowThreadProcessId(hwnd, &pid);
 
-        ui->windowsComboBox->addItem(QString("%1 (%2)").arg(QString::fromUtf16(wndCaptionWstr)).arg(pid));
+        ui->windowsComboBox->addItem(QString("%1 (%2)").arg(LPWSTR_TO_QSTRING(wndCaptionWstr)).arg(pid));
     }
 }
 
@@ -109,7 +133,7 @@ void D3WindowDBManager::tileWindows()
         shrinkWindowWithIndex(i);
 }
 
-void D3WindowDBManager::flashSelectedWindow()
+void D3WindowDBManager::highlightWindow()
 {
     HWND selectedWindow = currentWindow();
     ::FlashWindow(selectedWindow, TRUE); // flash the taskbar icon
@@ -154,10 +178,26 @@ void D3WindowDBManager::selectD3Path()
     QString d3Path = QFileDialog::getExistingDirectory(this, tr("Select D3 folder"), ui->d3PathLineEdit->text());
     if (!d3Path.isEmpty())
     {
-        if (QFile::exists(QString(d3Path + QDir::separator() + "Diablo III.exe")))
+        if (QFile::exists(QString(d3Path + kD3ExeName)))
             ui->d3PathLineEdit->setText(d3Path);
         else
-            QMessageBox::critical(this, qApp->applicationName(), tr("This is not a D3 folder: \'Diablo III.exe\' is missing."));
+            QMessageBox::critical(this, qApp->applicationName(), tr("This is not a D3 folder: \'%1\' is missing.", "param is D3 executable name").arg(kD3ExeName));
+    }
+}
+
+void D3WindowDBManager::selectDBPath()
+{
+    QString dbPath = QFileDialog::getOpenFileName(this, tr("Select Demonbuddy.exe"), ui->dbPathLineEdit->text(), tr("Demonbuddy executable (*.exe)"));
+    if (!dbPath.isEmpty())
+        ui->dbPathLineEdit->setText(QDir::toNativeSeparators(dbPath));
+}
+
+void D3WindowDBManager::addBot()
+{
+    AddBotDialog dlg(this);
+    if (dlg.exec())
+    {
+
     }
 }
 
@@ -167,6 +207,11 @@ void D3WindowDBManager::selectD3Path()
 HWND D3WindowDBManager::currentWindow() const
 {
     return _windows.at(ui->windowsComboBox->currentIndex());
+}
+
+QString D3WindowDBManager::d3Path() const
+{
+    return ui->d3PathLineEdit->text() + QDir::separator();
 }
 
 void D3WindowDBManager::shrinkWindowWithIndex(int windowIndex) const
