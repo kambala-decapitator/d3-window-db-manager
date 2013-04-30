@@ -30,9 +30,11 @@ private:
 
     QList<HWND> _windows;
 
-    HWND currentWindow();
+    HWND currentWindow() const;
     int screenWidth()  const { return ::GetSystemMetrics(SM_CXSCREEN); }
     int screenHeight() const { return ::GetSystemMetrics(SM_CYSCREEN); }
+
+    void shrinkWindowWithIndex(int windowIndex) const;
 };
 
 #endif // D3WINDOWDBMANAGER_H

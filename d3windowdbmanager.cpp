@@ -40,6 +40,8 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QMainWindow(parent), ui(
     ui->setupUi(this);
 
     connect(ui->buildWndListButton, SIGNAL(clicked()), SLOT(buildWindowList()));
+    connect(ui->tileButton, SIGNAL(clicked()), SLOT(tileWindows()));
+
     connect(ui->flashWindowButton,  SIGNAL(clicked()), SLOT(flashSelectedWindow()));
     connect(ui->shrinkButton,       SIGNAL(clicked()), SLOT(shrinkWindow()));
     connect(ui->restoreButton,      SIGNAL(clicked()), SLOT(restoreWindowSize()));
@@ -72,7 +74,8 @@ void D3WindowDBManager::buildWindowList()
 
 void D3WindowDBManager::tileWindows()
 {
-
+    for (int i = 0; i < _windows.size(); ++i)
+        shrinkWindowWithIndex(i);
 }
 
 void D3WindowDBManager::flashSelectedWindow()
@@ -107,10 +110,7 @@ void D3WindowDBManager::flashSelectedWindow()
 
 void D3WindowDBManager::shrinkWindow()
 {
-    int windowsPerRow = ui->windowsPerRowSpinBox->value(), windowIndex = ui->windowsComboBox->currentIndex();
-    int row = windowIndex / windowsPerRow, col = windowIndex % windowsPerRow;
-    int w = screenWidth() / windowsPerRow, h = screenHeight() / windowsPerRow;
-    ::MoveWindow(currentWindow(), col * w, row * h, w, h, FALSE);
+    shrinkWindowWithIndex(ui->windowsComboBox->currentIndex());
 }
 
 void D3WindowDBManager::restoreWindowSize()
@@ -118,7 +118,15 @@ void D3WindowDBManager::restoreWindowSize()
     ::SetWindowPos(currentWindow(), HWND_TOP, 0, 0, screenWidth(), screenHeight(), SWP_SHOWWINDOW);
 }
 
-HWND D3WindowDBManager::currentWindow()
+HWND D3WindowDBManager::currentWindow() const
 {
     return _windows.at(ui->windowsComboBox->currentIndex());
+}
+
+void D3WindowDBManager::shrinkWindowWithIndex(int windowIndex) const
+{
+    int windowsPerRow = ui->windowsPerRowSpinBox->value();
+    int row = windowIndex / windowsPerRow, col = windowIndex % windowsPerRow;
+    int w = screenWidth() / windowsPerRow, h = screenHeight() / windowsPerRow;
+    ::MoveWindow(_windows.at(windowIndex), col * w, row * h, w, h, FALSE);
 }
