@@ -74,11 +74,11 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
 
     connect(&_d3StarterProc, SIGNAL(readyReadStandardOutput()), SLOT(readD3StarterOutput()));
 
-    EnumWindowsHelper::d3WindowDBManager = this;
-    buildWindowList();
-
     QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
     ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
+
+    EnumWindowsHelper::d3WindowDBManager = this;
+    buildWindowList();
 }
 
 D3WindowDBManager::~D3WindowDBManager()

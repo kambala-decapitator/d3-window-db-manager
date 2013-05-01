@@ -3,17 +3,24 @@
 
 #include <QDialog>
 
-namespace Ui {
-class AddBotDialog;
-}
+
+namespace Ui { class AddBotDialog; }
 
 class AddBotDialog : public QDialog
 {
     Q_OBJECT
     
 public:
+    static QString settingsPath();
+
     explicit AddBotDialog(QWidget *parent = 0);
-    ~AddBotDialog();
+    virtual ~AddBotDialog();
+
+public slots:
+    virtual void accept();
+
+private slots:
+    void textFieldTextChanged();
     
 private:
     Ui::AddBotDialog *ui;
