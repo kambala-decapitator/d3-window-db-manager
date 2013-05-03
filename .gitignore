@@ -22,7 +22,6 @@ Makefile
 # mine
 
 *.obj
-*.exe
 *.pdb
 *.user
 *.aps
