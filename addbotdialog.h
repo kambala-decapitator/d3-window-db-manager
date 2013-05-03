@@ -3,8 +3,11 @@
 
 #include <QDialog>
 
+#include "botinfo.h"
+
 
 namespace Ui { class AddBotDialog; }
+class QLineEdit;
 
 class AddBotDialog : public QDialog
 {
@@ -12,18 +15,26 @@ class AddBotDialog : public QDialog
     
 public:
     static QString settingsPath();
+    static void selectDBPath(QLineEdit *lineEdit);
 
-    explicit AddBotDialog(QWidget *parent = 0);
+    explicit AddBotDialog(const QString &defaultDBPath, QWidget *parent = 0);
     virtual ~AddBotDialog();
+
+    BotInfo botInfo() const;
 
 public slots:
     virtual void accept();
 
 private slots:
     void textFieldTextChanged();
+
+    void selectProfile();
+    void selectDBPath();
     
 private:
     Ui::AddBotDialog *ui;
+
+    QString _botName, _defaultDBPath;
 };
 
 #endif // ADDBOTDIALOG_H

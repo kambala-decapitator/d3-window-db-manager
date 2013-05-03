@@ -26,6 +26,7 @@ SOURCES += main.cpp \
            addbotdialog.cpp
 
 HEADERS += d3windowdbmanager.h \
+           botinfo.h \
            addbotdialog.h
 
 FORMS += d3windowdbmanager.ui \

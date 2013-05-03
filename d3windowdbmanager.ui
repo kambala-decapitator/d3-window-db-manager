@@ -169,7 +169,7 @@
     <number>1</number>
    </property>
    <property name="value">
-    <number>2</number>
+    <number>3</number>
    </property>
   </widget>
   <widget class="QPushButton" name="startD3Button">
@@ -188,7 +188,7 @@
   <widget class="QPushButton" name="startLauncherButton">
    <property name="geometry">
     <rect>
-     <x>170</x>
+     <x>390</x>
      <y>10</y>
      <width>91</width>
      <height>23</height>
@@ -246,6 +246,26 @@
      <height>192</height>
     </rect>
    </property>
+   <column>
+    <property name="text">
+     <string>Name</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>E-mail</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Profile</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>DB path</string>
+    </property>
+   </column>
   </widget>
   <widget class="QPushButton" name="addBotButton">
    <property name="geometry">

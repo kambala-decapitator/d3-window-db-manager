@@ -2,6 +2,7 @@
 #include "ui_addbotdialog.h"
 
 #include <QInputDialog>
+#include <QFileDialog>
 
 #include <QSettings>
 #include <QDir>
@@ -14,14 +15,28 @@ QString AddBotDialog::settingsPath()
     return qApp->applicationDirPath() + QDir::separator() + "settings.ini";
 }
 
+void AddBotDialog::selectDBPath(QLineEdit *lineEdit)
+{
+    QString dbPath = QFileDialog::getOpenFileName(lineEdit->parentWidget(), tr("Select Demonbuddy.exe"), lineEdit->text(), tr("Demonbuddy executable (*.exe)"));
+    if (!dbPath.isEmpty())
+        lineEdit->setText(QDir::toNativeSeparators(dbPath));
+}
+
 
 // ctor/dtor
 
-AddBotDialog::AddBotDialog(QWidget *parent) : QDialog(parent), ui(new Ui::AddBotDialog)
+AddBotDialog::AddBotDialog(const QString &defaultDBPath, QWidget *parent) : QDialog(parent), ui(new Ui::AddBotDialog), _defaultDBPath(defaultDBPath)
 {
     ui->setupUi(this);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
     ui->buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
+
+    if (defaultDBPath.isEmpty())
+    {
+        ui->defaultDBPathRadioButton->setDisabled(true);
+        ui->customDBPathRadioButton->setChecked(true);
+    }
 
     connect(ui->emailLineEdit,        SIGNAL(textChanged(QString)), SLOT(textFieldTextChanged()));
     connect(ui->passwordLineEdit,     SIGNAL(textChanged(QString)), SLOT(textFieldTextChanged()));
@@ -31,11 +46,29 @@ AddBotDialog::AddBotDialog(QWidget *parent) : QDialog(parent), ui(new Ui::AddBot
 
     connect(ui->defaultDBPathRadioButton, SIGNAL(clicked()), SLOT(textFieldTextChanged()));
     connect(ui->customDBPathRadioButton,  SIGNAL(clicked()), SLOT(textFieldTextChanged()));
+
+    connect(ui->selectProfileButton, SIGNAL(clicked()), SLOT(selectProfile()));
+    connect(ui->selectDBPathButton,  SIGNAL(clicked()), SLOT(selectDBPath()));
 }
 
 AddBotDialog::~AddBotDialog()
 {
     delete ui;
+}
+
+
+// public methods
+
+BotInfo AddBotDialog::botInfo() const
+{
+    BotInfo bot;
+    bot.name = _botName;
+    bot.email = ui->emailLineEdit->text();
+    bot.password = ui->passwordLineEdit->text();
+    bot.dbKey = ui->dbKeyLineEdit->text();
+    bot.profilePath = ui->profileLineEdit->text();
+    bot.dbPath = ui->customDBPathRadioButton->isChecked() ? ui->customDBPathLineEdit->text() : _defaultDBPath;
+    return bot;
 }
 
 
@@ -46,21 +79,7 @@ void AddBotDialog::accept()
     QString botName = QInputDialog::getText(this, qApp->applicationName(), tr("Bot name:"));
     if (!botName.isEmpty())
     {
-        QSettings settings(settingsPath(), QSettings::IniFormat);
-        settings.beginGroup(botName);
-
-        settings.setValue("email",    ui->emailLineEdit->text());
-        settings.setValue("password", ui->passwordLineEdit->text());
-        settings.setValue("dbKey",   ui->dbKeyLineEdit->text());
-        settings.setValue("profile",  ui->profileLineEdit->text());
-
-        bool isCustomDBPath = ui->customDBPathRadioButton->isChecked();
-        settings.setValue("isCustomDBPath", isCustomDBPath);
-        if (isCustomDBPath)
-            settings.setValue("dbPath", ui->customDBPathLineEdit->text());
-
-        settings.endGroup();
-
+        _botName = botName;
         QDialog::accept();
     }
 }
@@ -73,4 +92,18 @@ void AddBotDialog::textFieldTextChanged()
     bool isOkDisabled = ui->emailLineEdit->text().isEmpty() || ui->passwordLineEdit->text().isEmpty() || ui->dbKeyLineEdit->text().isEmpty() || ui->profileLineEdit->text().isEmpty()
                         || (ui->customDBPathRadioButton->isChecked() && ui->customDBPathLineEdit->text().isEmpty());
     ui->buttonBox->button(QDialogButtonBox::Ok)->setDisabled(isOkDisabled);
+}
+
+void AddBotDialog::selectProfile()
+{
+    QString profilePath = QFileDialog::getOpenFileName(this, tr("Select profile"), ui->profileLineEdit->text(), tr("Demonbuddy profiles (*.xml)"));
+    if (!profilePath.isEmpty())
+        ui->profileLineEdit->setText(QDir::toNativeSeparators(profilePath));
+}
+
+void AddBotDialog::selectDBPath()
+{
+    selectDBPath(ui->customDBPathLineEdit);
+    if (!ui->customDBPathLineEdit->text().isEmpty())
+        ui->customDBPathRadioButton->setChecked(true);
 }

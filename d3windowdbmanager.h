@@ -7,6 +7,8 @@
 
 #include <Windows.h>
 
+#include "botinfo.h"
+
 
 namespace Ui { class D3WindowDBManagerClass; }
 
@@ -21,6 +23,9 @@ public:
     virtual ~D3WindowDBManager();
 
     void addWindow(HWND hwnd) { _windows << hwnd; }
+
+protected:
+    void closeEvent(QCloseEvent *e);
 
 private slots:
     void startGame();
@@ -38,12 +43,14 @@ private slots:
     void selectDBPath();
 
     void addBot();
+    void startAllBots();
 
 private:
     Ui::D3WindowDBManagerClass *ui;
 
     QList<HWND> _windows;
     QProcess _d3StarterProc;
+    QList<BotInfo> _bots;
 
     HWND currentWindow() const;
     int screenWidth()  const { return ::GetSystemMetrics(SM_CXSCREEN); }
@@ -51,6 +58,9 @@ private:
     QString d3Path() const;
 
     void shrinkWindowWithIndex(int windowIndex) const;
+
+    void loadSettings();
+    void saveSettings() const;
 };
 
 #endif // D3WINDOWDBMANAGER_H

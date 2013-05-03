@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDesktopServices>
+#include <QCloseEvent>
 
 #include <QUrl>
 #include <QSettings>
@@ -16,8 +17,10 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #  define LPWSTR_TO_QSTRING(wstr) QString::fromUtf16(reinterpret_cast<const ushort *>(wstr))
+#  define QSTRING_TO_LPCWSTR(s) reinterpret_cast<LPCWSTR>(s.utf16())
 #else
 #  define LPWSTR_TO_QSTRING(wstr) QString::fromUtf16(wstr)
+#  define QSTRING_TO_LPCWSTR(s) s.utf16()
 #endif
 
 static const int n = 50;
@@ -57,6 +60,8 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
 {
     ui->setupUi(this);
 
+    loadSettings();
+
     connect(ui->startD3Button,       SIGNAL(clicked()), SLOT(startGame()));
     connect(ui->startLauncherButton, SIGNAL(clicked()), SLOT(startLauncher()));
 
@@ -74,8 +79,11 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
 
     connect(&_d3StarterProc, SIGNAL(readyReadStandardOutput()), SLOT(readD3StarterOutput()));
 
-    QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
-    ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
+    if (ui->d3PathLineEdit->text().isEmpty())
+    {
+        QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
+        ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
+    }
 
     EnumWindowsHelper::d3WindowDBManager = this;
     buildWindowList();
@@ -84,6 +92,15 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
 D3WindowDBManager::~D3WindowDBManager()
 {
     delete ui;
+}
+
+
+// protected methods
+
+void D3WindowDBManager::closeEvent(QCloseEvent *e)
+{
+    saveSettings();
+    e->accept();
 }
 
 
@@ -100,7 +117,7 @@ void D3WindowDBManager::readD3StarterOutput()
     {
         _d3StarterProc.close();
 
-        QTimer::singleShot(20000, this, SLOT(buildWindowList()));
+        QTimer::singleShot(25000, this, SLOT(buildWindowList()));
     }
 }
 
@@ -115,15 +132,25 @@ void D3WindowDBManager::buildWindowList()
     EnumWindowsHelper::startEnumWindows();
 
     ui->windowsComboBox->clear();
+    int i = 1;
     foreach (HWND hwnd, _windows)
     {
         WCHAR wndCaptionWstr[n];
         ::GetWindowText(hwnd, wndCaptionWstr, n);
 
+        QString caption = LPWSTR_TO_QSTRING(wndCaptionWstr), newCaption;
+        int underscoreIndex = caption.indexOf("_");
+        if (underscoreIndex != -1)
+            newCaption = caption.left(underscoreIndex + 1);
+        else
+            newCaption = caption + "_";
+        newCaption += QString::number(i++);
+        ::SetWindowText(hwnd, QSTRING_TO_LPCWSTR(newCaption));
+
         DWORD pid;
         ::GetWindowThreadProcessId(hwnd, &pid);
 
-        ui->windowsComboBox->addItem(QString("%1 (%2)").arg(LPWSTR_TO_QSTRING(wndCaptionWstr)).arg(pid));
+        ui->windowsComboBox->addItem(QString("%1 (%2)").arg(newCaption).arg(pid));
     }
 }
 
@@ -187,18 +214,22 @@ void D3WindowDBManager::selectD3Path()
 
 void D3WindowDBManager::selectDBPath()
 {
-    QString dbPath = QFileDialog::getOpenFileName(this, tr("Select Demonbuddy.exe"), ui->dbPathLineEdit->text(), tr("Demonbuddy executable (*.exe)"));
-    if (!dbPath.isEmpty())
-        ui->dbPathLineEdit->setText(QDir::toNativeSeparators(dbPath));
+    AddBotDialog::selectDBPath(ui->dbPathLineEdit);
 }
 
 void D3WindowDBManager::addBot()
 {
-    AddBotDialog dlg(this);
+    AddBotDialog dlg(ui->dbPathLineEdit->text(), this);
     if (dlg.exec())
     {
-
+        BotInfo bot = dlg.botInfo();
+        _bots << bot;
+        /*QTreeWidgetItem *newBotItem = */new QTreeWidgetItem(ui->botsTreeWidget, QStringList() << bot.name << bot.email << QFileInfo(bot.profilePath).baseName() << bot.dbPath);
     }
+}
+
+void D3WindowDBManager::startAllBots()
+{
 }
 
 
@@ -220,4 +251,61 @@ void D3WindowDBManager::shrinkWindowWithIndex(int windowIndex) const
     int row = windowIndex / windowsPerRow, col = windowIndex % windowsPerRow;
     int w = screenWidth() / windowsPerRow, h = screenHeight() / windowsPerRow;
     ::MoveWindow(_windows.at(windowIndex), col * w, row * h, w, h, FALSE);
+}
+
+void D3WindowDBManager::loadSettings()
+{
+    QSettings settings(AddBotDialog::settingsPath(), QSettings::IniFormat);
+    QVariant v = settings.value("d3Instances");
+    if (v.isValid())
+        ui->d3InstancesSpinBox->setValue(v.toInt());
+
+    v = settings.value("windowsPerRow");
+    if (v.isValid())
+        ui->windowsPerRowSpinBox->setValue(v.toInt());
+
+    ui->d3PathLineEdit->setText(settings.value("d3Path").toString());
+    ui->dbPathLineEdit->setText(settings.value("dbPath").toString());
+
+    int n = settings.beginReadArray("bots");
+    for (int i = 0; i < n; ++i)
+    {
+        settings.setArrayIndex(i);
+
+        BotInfo bot;
+        bot.name = settings.value("name").toString();
+        bot.email = settings.value("email").toString();
+        bot.password = settings.value("password").toString();
+        bot.dbKey = settings.value("dbKey").toString();
+        bot.profilePath = settings.value("profile").toString();
+        bot.dbPath = settings.value("dbPath").toString();
+        _bots << bot;
+        /*QTreeWidgetItem *newBotItem = */new QTreeWidgetItem(ui->botsTreeWidget, QStringList() << bot.name << bot.email << QFileInfo(bot.profilePath).baseName() << bot.dbPath);
+    }
+    settings.endArray();
+}
+
+void D3WindowDBManager::saveSettings() const
+{
+    QSettings settings(AddBotDialog::settingsPath(), QSettings::IniFormat);
+    settings.setValue("d3Instances",   ui->d3InstancesSpinBox->value());
+    settings.setValue("windowsPerRow", ui->windowsPerRowSpinBox->value());
+
+    settings.setValue("d3Path", ui->d3PathLineEdit->text());
+    settings.setValue("dbPath", ui->dbPathLineEdit->text());
+
+    settings.beginWriteArray("bots");
+    for (int i = 0; i < _bots.size(); ++i)
+    {
+        settings.setArrayIndex(i);
+
+        const BotInfo &bot = _bots.at(i);
+        settings.setValue("name",     bot.name);
+        settings.setValue("email",    bot.email);
+        settings.setValue("password", bot.password);
+        settings.setValue("dbKey",    bot.dbKey);
+        settings.setValue("profile",  bot.profilePath);
+        settings.setValue("dbPath",   bot.dbPath);
+    }
+    settings.endArray();
 }

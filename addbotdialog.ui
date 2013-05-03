@@ -224,6 +224,21 @@
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>emailLineEdit</tabstop>
+  <tabstop>passwordLineEdit</tabstop>
+  <tabstop>dbKeyLineEdit</tabstop>
+  <tabstop>profileLineEdit</tabstop>
+  <tabstop>selectProfileButton</tabstop>
+  <tabstop>customDBPathLineEdit</tabstop>
+  <tabstop>selectDBPathButton</tabstop>
+  <tabstop>buttonBox</tabstop>
+  <tabstop>noflashCheckBox</tabstop>
+  <tabstop>autostartCheckBox</tabstop>
+  <tabstop>noupdateCheckBox</tabstop>
+  <tabstop>defaultDBPathRadioButton</tabstop>
+  <tabstop>customDBPathRadioButton</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
