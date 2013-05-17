@@ -1,15 +1,18 @@
 #include    "d3windowdbmanager.h"
 #include "ui_d3windowdbmanager.h"
 #include "addbotdialog.h"
+#include "editbotdialog.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDesktopServices>
 #include <QCloseEvent>
+#include <QMenu>
 
 #include <QUrl>
 #include <QSettings>
 #include <QTimer>
+#include <QRegExp>
 
 #ifndef QT_NO_DEBUG
 #include <QDebug>
@@ -17,13 +20,13 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #  define LPWSTR_TO_QSTRING(wstr) QString::fromUtf16(reinterpret_cast<const ushort *>(wstr))
-#  define QSTRING_TO_LPCWSTR(s) reinterpret_cast<LPCWSTR>(s.utf16())
+#  define QSTRING_TO_LPCWSTR(s)   reinterpret_cast<LPCWSTR>(s.utf16())
 #else
 #  define LPWSTR_TO_QSTRING(wstr) QString::fromUtf16(wstr)
-#  define QSTRING_TO_LPCWSTR(s) s.utf16()
+#  define QSTRING_TO_LPCWSTR(s)   s.utf16()
 #endif
 
-static const int n = 50;
+static const int kMaxStringLength = 50, kWaitAfterLaunchMsec = 25000;
 
 
 class EnumWindowsHelper
@@ -33,18 +36,34 @@ public:
 
     static void startEnumWindows()
     {
-        ::EnumWindows(EnumWindowsProc, 0);
+        ::EnumWindows(EnumD3WindowsProc, 0);
+    }
+
+    static void minimizeDemonbuddies()
+    {
+        ::EnumWindows(EnumDbWindowsProc, 0);
     }
 
 private:
-    static BOOL CALLBACK EnumWindowsProc(_In_ HWND hwnd, _In_ LPARAM lParam)
+    static BOOL CALLBACK EnumD3WindowsProc(_In_ HWND hwnd, _In_ LPARAM lParam)
     {
         Q_UNUSED(lParam);
 
-        WCHAR wndClassWstr[n];
-        ::RealGetWindowClass(hwnd, wndClassWstr, n);
+        WCHAR wndClassWstr[kMaxStringLength];
+        ::RealGetWindowClass(hwnd, wndClassWstr, kMaxStringLength);
         if (!wcscmp(wndClassWstr, L"D3 Main Window Class"))
             d3WindowDBManager->addWindow(hwnd);
+        return TRUE;
+    }
+
+    static BOOL CALLBACK EnumDbWindowsProc(_In_ HWND hwnd, _In_ LPARAM lParam)
+    {
+        Q_UNUSED(lParam);
+
+        WCHAR wndTitleWstr[kMaxStringLength];
+        ::GetWindowText(hwnd, wndTitleWstr, kMaxStringLength);
+        if (!wcscmp(wndTitleWstr, L"Demonbuddy"))
+            ::ShowWindow(hwnd, SW_SHOWMINNOACTIVE);
         return TRUE;
     }
 };
@@ -56,7 +75,7 @@ const QString D3WindowDBManager::kD3ExeName("Diablo III.exe");
 
 // D3WindowDBManager ctor/dtor
 
-D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new Ui::D3WindowDBManagerClass)
+D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new Ui::D3WindowDBManagerClass), _justLogin(false)
 {
     ui->setupUi(this);
 
@@ -75,7 +94,12 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
     connect(ui->selectD3PathButton, SIGNAL(clicked()), SLOT(selectD3Path()));
     connect(ui->selectDBPathButton, SIGNAL(clicked()), SLOT(selectDBPath()));
 
-    connect(ui->addBotButton, SIGNAL(clicked()), SLOT(addBot()));
+    connect(ui->startAllBotsButton,    SIGNAL(clicked()), SLOT(startAllBots()));
+    connect(ui->addBotButton,          SIGNAL(clicked()), SLOT(addBot()));
+    connect(ui->editSelectedBotButton, SIGNAL(clicked()), SLOT(editSelectedBot()));
+
+    connect(ui->botsTreeWidget, SIGNAL(doubleClicked(QModelIndex)), SLOT(startBotWithIndex(QModelIndex)));
+    connect(ui->botsTreeWidget, SIGNAL(customContextMenuRequested(QPoint)), SLOT(showBotContextMenu(QPoint)));
 
     connect(&_d3StarterProc, SIGNAL(readyReadStandardOutput()), SLOT(readD3StarterOutput()));
 
@@ -108,16 +132,21 @@ void D3WindowDBManager::closeEvent(QCloseEvent *e)
 
 void D3WindowDBManager::startGame()
 {
-    _d3StarterProc.start("D3Starter.exe", QStringList() << (d3Path() + kD3ExeName) << QString::number(ui->d3InstancesSpinBox->value()), QIODevice::ReadOnly);
+    startGames(ui->d3InstancesSpinBox->value());
 }
 
 void D3WindowDBManager::readD3StarterOutput()
 {
-    if (_d3StarterProc.readAllStandardOutput().contains("All done!"))
+    QByteArray output = _d3StarterProc.readAllStandardOutput();
+    QRegExp re("Process ID (\\d+) started");
+    if (re.indexIn(output) != -1)
+        _pids << re.cap(1).toInt();
+
+    if (output.contains("All done!"))
     {
         _d3StarterProc.close();
 
-        QTimer::singleShot(25000, this, SLOT(buildWindowList()));
+        QTimer::singleShot(kWaitAfterLaunchMsec, this, SLOT(tileAndLaunchDb()));
     }
 }
 
@@ -135,8 +164,8 @@ void D3WindowDBManager::buildWindowList()
     int i = 1;
     foreach (HWND hwnd, _windows)
     {
-        WCHAR wndCaptionWstr[n];
-        ::GetWindowText(hwnd, wndCaptionWstr, n);
+        WCHAR wndCaptionWstr[kMaxStringLength];
+        ::GetWindowText(hwnd, wndCaptionWstr, kMaxStringLength);
 
         QString caption = LPWSTR_TO_QSTRING(wndCaptionWstr), newCaption;
         int underscoreIndex = caption.indexOf("_");
@@ -217,6 +246,24 @@ void D3WindowDBManager::selectDBPath()
     AddBotDialog::selectDBPath(ui->dbPathLineEdit);
 }
 
+void D3WindowDBManager::startAllBots()
+{
+    _pids.clear();
+    startGames(ui->botsTreeWidget->topLevelItemCount());
+}
+
+void D3WindowDBManager::startSelectedBot()
+{
+    _justLogin = false;
+    startBotWithIndex(ui->botsTreeWidget->currentIndex());
+}
+
+void D3WindowDBManager::loginSelectedBot()
+{
+    _justLogin = true;
+//    startBotWithIndex(ui->botsTreeWidget->currentIndex());
+}
+
 void D3WindowDBManager::addBot()
 {
     AddBotDialog dlg(ui->dbPathLineEdit->text(), this);
@@ -228,8 +275,76 @@ void D3WindowDBManager::addBot()
     }
 }
 
-void D3WindowDBManager::startAllBots()
+void D3WindowDBManager::editSelectedBot()
 {
+    int botIndex = ui->botsTreeWidget->currentIndex().row();
+    if (botIndex == -1)
+        return;
+
+    const BotInfo &bot = _bots.at(botIndex);
+    EditBotDialog dlg(ui->dbPathLineEdit->text(), this);
+    dlg.setWindowTitle(bot.name);
+    dlg.setBotInfo(bot);
+
+    if (dlg.exec())
+    {
+        BotInfo newBot = dlg.botInfo();
+        newBot.name = bot.name;
+        _bots.replace(botIndex, newBot);
+
+        QTreeWidgetItem *botItem = ui->botsTreeWidget->currentItem();
+        botItem->setText(1, newBot.email);
+        botItem->setText(2, QFileInfo(newBot.profilePath).baseName());
+        botItem->setText(3, newBot.dbPath);
+    }
+}
+
+void D3WindowDBManager::deleteSelectedBot()
+{
+}
+
+void D3WindowDBManager::startBotWithIndex(const QModelIndex &index)
+{
+    _pids.clear();
+    _startedBotIndex = index;
+    startGames(1);
+}
+
+void D3WindowDBManager::showBotContextMenu(const QPoint &p)
+{
+    if (ui->botsTreeWidget->itemAt(p))
+    {
+        QAction *startAction = new QAction(tr("Start"), ui->botsTreeWidget);
+        connect(startAction, SIGNAL(triggered()), SLOT(startSelectedBot()));
+
+        QAction *loginAction = new QAction(tr("Just login"), ui->botsTreeWidget);
+        connect(loginAction, SIGNAL(triggered()), SLOT(loginSelectedBot()));
+
+        QAction *separator = new QAction(ui->botsTreeWidget);
+        separator->setSeparator(true);
+
+        QAction *editAction = new QAction(tr("Edit"), ui->botsTreeWidget);
+        connect(editAction, SIGNAL(triggered()), SLOT(editSelectedBot()));
+
+        QAction *deleteAction = new QAction(tr("Delete"), ui->botsTreeWidget);
+        connect(deleteAction, SIGNAL(triggered()), SLOT(deleteSelectedBot()));
+
+        QMenu::exec(QList<QAction *>() << startAction << loginAction << separator << editAction << deleteAction, ui->botsTreeWidget->viewport()->mapToGlobal(p));
+    }
+}
+
+void D3WindowDBManager::tileAndLaunchDb()
+{
+    startDemonbuddies();
+    QTimer::singleShot(2000, this, SLOT(minimizeDemonbuddies()));
+
+    buildWindowList();
+    tileWindows();
+}
+
+void D3WindowDBManager::minimizeDemonbuddies()
+{
+    EnumWindowsHelper::minimizeDemonbuddies();
 }
 
 
@@ -279,6 +394,9 @@ void D3WindowDBManager::loadSettings()
         bot.dbKey = settings.value("dbKey").toString();
         bot.profilePath = settings.value("profile").toString();
         bot.dbPath = settings.value("dbPath").toString();
+        bot.noflash = settings.value("noflash", true).toBool();
+        bot.autostart = settings.value("autostart", true).toBool();
+        bot.noupdate = settings.value("noupdate", true).toBool();
         _bots << bot;
         /*QTreeWidgetItem *newBotItem = */new QTreeWidgetItem(ui->botsTreeWidget, QStringList() << bot.name << bot.email << QFileInfo(bot.profilePath).baseName() << bot.dbPath);
     }
@@ -300,12 +418,48 @@ void D3WindowDBManager::saveSettings() const
         settings.setArrayIndex(i);
 
         const BotInfo &bot = _bots.at(i);
-        settings.setValue("name",     bot.name);
-        settings.setValue("email",    bot.email);
-        settings.setValue("password", bot.password);
-        settings.setValue("dbKey",    bot.dbKey);
-        settings.setValue("profile",  bot.profilePath);
-        settings.setValue("dbPath",   bot.dbPath);
+        settings.setValue("name",      bot.name);
+        settings.setValue("email",     bot.email);
+        settings.setValue("password",  bot.password);
+        settings.setValue("dbKey",     bot.dbKey);
+        settings.setValue("profile",   bot.profilePath);
+        settings.setValue("dbPath",    bot.dbPath);
+        settings.setValue("noflash",   bot.noflash);
+        settings.setValue("autostart", bot.autostart);
+        settings.setValue("noupdate",  bot.noupdate);
     }
     settings.endArray();
+}
+
+void D3WindowDBManager::startGames(int n)
+{
+    _d3StarterProc.start("D3Starter.exe", QStringList() << (d3Path() + kD3ExeName) << QString::number(n), QIODevice::ReadOnly);
+}
+
+void D3WindowDBManager::startDemonbuddies()
+{
+    if (_startedBotIndex.isValid())
+    {
+        startDemonbuddy(_startedBotIndex.row(), 0);
+        _startedBotIndex = QModelIndex();
+    }
+    else
+        for (int i = 0; i < _pids.size(); ++i)
+            startDemonbuddy(i, i);
+}
+
+void D3WindowDBManager::startDemonbuddy(int botIndex, int pidIndex)
+{
+    const BotInfo &bot = _bots.at(botIndex);
+    QStringList params = QStringList() << "-YarEnableAll" << "-routine=Trinity" << "-pid=" + QString::number(_pids.at(pidIndex)) << "-key=" + bot.dbKey
+                                       << "-bnetaccount=" + bot.email << "-bnetpassword=" + bot.password << "-profile=" + bot.profilePath;
+    if (bot.autostart && !_justLogin)
+        params << "-autostart";
+    if (bot.noflash)
+        params << "-noflash";
+    if (bot.noupdate)
+        params << "-noupdate";
+    QProcess::startDetached(bot.dbPath, params);
+
+    _justLogin = false;
 }

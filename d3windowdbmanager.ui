@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>494</width>
+    <width>573</width>
     <height>469</height>
    </rect>
   </property>
@@ -52,7 +52,7 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>200</x>
+     <x>430</x>
      <y>43</y>
      <width>85</width>
      <height>13</height>
@@ -104,7 +104,7 @@
   <widget class="QSpinBox" name="windowsPerRowSpinBox">
    <property name="geometry">
     <rect>
-     <x>290</x>
+     <x>520</x>
      <y>40</y>
      <width>42</width>
      <height>20</height>
@@ -138,7 +138,7 @@
     <rect>
      <x>87</x>
      <y>120</y>
-     <width>311</width>
+     <width>391</width>
      <height>20</height>
     </rect>
    </property>
@@ -146,7 +146,7 @@
   <widget class="QPushButton" name="selectD3PathButton">
    <property name="geometry">
     <rect>
-     <x>407</x>
+     <x>487</x>
      <y>120</y>
      <width>75</width>
      <height>23</height>
@@ -188,7 +188,7 @@
   <widget class="QPushButton" name="startLauncherButton">
    <property name="geometry">
     <rect>
-     <x>390</x>
+     <x>470</x>
      <y>10</y>
      <width>91</width>
      <height>23</height>
@@ -204,7 +204,7 @@
   <widget class="QPushButton" name="selectDBPathButton">
    <property name="geometry">
     <rect>
-     <x>407</x>
+     <x>487</x>
      <y>160</y>
      <width>75</width>
      <height>23</height>
@@ -230,9 +230,9 @@
   <widget class="QLineEdit" name="dbPathLineEdit">
    <property name="geometry">
     <rect>
-     <x>169</x>
+     <x>170</x>
      <y>160</y>
-     <width>231</width>
+     <width>311</width>
      <height>20</height>
     </rect>
    </property>
@@ -242,9 +242,12 @@
     <rect>
      <x>10</x>
      <y>260</y>
-     <width>471</width>
+     <width>551</width>
      <height>192</height>
     </rect>
+   </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::CustomContextMenu</enum>
    </property>
    <column>
     <property name="text">
@@ -270,7 +273,7 @@
   <widget class="QPushButton" name="addBotButton">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>330</x>
      <y>220</y>
      <width>75</width>
      <height>23</height>
@@ -296,7 +299,7 @@
   <widget class="QPushButton" name="startAllBotsButton">
    <property name="geometry">
     <rect>
-     <x>110</x>
+     <x>10</x>
      <y>220</y>
      <width>75</width>
      <height>23</height>
@@ -304,6 +307,58 @@
    </property>
    <property name="text">
     <string>start all</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="editSelectedBotButton">
+   <property name="geometry">
+    <rect>
+     <x>410</x>
+     <y>220</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>edit...</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>220</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>start</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_2">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>220</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>just login</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_3">
+   <property name="geometry">
+    <rect>
+     <x>490</x>
+     <y>220</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>delete...</string>
    </property>
   </widget>
  </widget>

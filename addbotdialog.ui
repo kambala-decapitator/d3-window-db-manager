@@ -38,6 +38,9 @@
      <height>20</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>e-mail</string>
+   </property>
    <property name="placeholderText">
     <string>e-mail</string>
    </property>
@@ -50,6 +53,9 @@
      <width>113</width>
      <height>20</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>password</string>
    </property>
    <property name="echoMode">
     <enum>QLineEdit::Normal</enum>
@@ -131,6 +137,9 @@
      <width>113</width>
      <height>20</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Demonbuddy key</string>
    </property>
    <property name="text">
     <string/>

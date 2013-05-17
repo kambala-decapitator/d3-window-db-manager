@@ -4,6 +4,7 @@
 #include <QWidget>
 
 #include <QProcess>
+#include <QModelIndex>
 
 #include <Windows.h>
 
@@ -42,8 +43,18 @@ private slots:
     void selectD3Path();
     void selectDBPath();
 
-    void addBot();
     void startAllBots();
+    void startSelectedBot();
+    void loginSelectedBot();
+    void addBot();
+    void editSelectedBot();
+    void deleteSelectedBot();
+
+    void startBotWithIndex(const QModelIndex &index);
+    void showBotContextMenu(const QPoint &p);
+
+    void tileAndLaunchDb();
+    void minimizeDemonbuddies();
 
 private:
     Ui::D3WindowDBManagerClass *ui;
@@ -51,6 +62,9 @@ private:
     QList<HWND> _windows;
     QProcess _d3StarterProc;
     QList<BotInfo> _bots;
+    QList<int> _pids;
+    QModelIndex _startedBotIndex;
+    bool _justLogin;
 
     HWND currentWindow() const;
     int screenWidth()  const { return ::GetSystemMetrics(SM_CXSCREEN); }
@@ -61,6 +75,10 @@ private:
 
     void loadSettings();
     void saveSettings() const;
+
+    void startGames(int n);
+    void startDemonbuddies();
+    void startDemonbuddy(int botIndex, int pidIndex);
 };
 
 #endif // D3WINDOWDBMANAGER_H

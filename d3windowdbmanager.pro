@@ -23,11 +23,13 @@ DEFINES += NVER_STRING=$$sprintf("\"\\\"%1\\\"\"", $$VERSION)
 # files
 SOURCES += main.cpp \
            d3windowdbmanager.cpp \
-           addbotdialog.cpp
+           addbotdialog.cpp \
+           editbotdialog.cpp
 
 HEADERS += d3windowdbmanager.h \
            botinfo.h \
-           addbotdialog.h
+           addbotdialog.h \
+           editbotdialog.h
 
 FORMS += d3windowdbmanager.ui \
          addbotdialog.ui

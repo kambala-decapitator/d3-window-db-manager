@@ -30,8 +30,8 @@ private slots:
 
     void selectProfile();
     void selectDBPath();
-    
-private:
+
+protected:
     Ui::AddBotDialog *ui;
 
     QString _botName, _defaultDBPath;

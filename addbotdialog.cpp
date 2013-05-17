@@ -68,6 +68,11 @@ BotInfo AddBotDialog::botInfo() const
     bot.dbKey = ui->dbKeyLineEdit->text();
     bot.profilePath = ui->profileLineEdit->text();
     bot.dbPath = ui->customDBPathRadioButton->isChecked() ? ui->customDBPathLineEdit->text() : _defaultDBPath;
+
+    bot.noflash = ui->noflashCheckBox->isChecked();
+    bot.autostart = ui->autostartCheckBox->isChecked();
+    bot.noupdate = ui->noupdateCheckBox->isChecked();
+
     return bot;
 }
 
