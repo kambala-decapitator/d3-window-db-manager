@@ -5,6 +5,7 @@
 
 #include <QProcess>
 #include <QModelIndex>
+#include <QTimer>
 
 #include <Windows.h>
 
@@ -24,6 +25,9 @@ public:
     virtual ~D3WindowDBManager();
 
     void addWindow(HWND hwnd) { _windows << hwnd; }
+
+    DWORD loginDemonbuddyPid() const;
+    void terminateLoginDemonbuddyProc();
 
 protected:
     void closeEvent(QCloseEvent *e);
@@ -46,8 +50,10 @@ private slots:
     void startAllBots();
     void startSelectedBot();
     void loginSelectedBot();
+
     void addBot();
     void editSelectedBot();
+    void renameSelectedBot();
     void deleteSelectedBot();
 
     void startBotWithIndex(const QModelIndex &index);
@@ -56,15 +62,18 @@ private slots:
     void tileAndLaunchDb();
     void minimizeDemonbuddies();
 
+    void findNewDemonbuddyWindow();
+
 private:
     Ui::D3WindowDBManagerClass *ui;
 
     QList<HWND> _windows;
-    QProcess _d3StarterProc;
+    QProcess _d3StarterProc, _loginDemonbuddyProc;
     QList<BotInfo> _bots;
     QList<int> _pids;
     QModelIndex _startedBotIndex;
-    bool _justLogin;
+    bool _justLogin, _shouldStartDemonbuddy;
+    QTimer _loginDemonbuddyTimer;
 
     HWND currentWindow() const;
     int screenWidth()  const { return ::GetSystemMetrics(SM_CXSCREEN); }

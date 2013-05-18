@@ -4,7 +4,7 @@
 #include "addbotdialog.h"
 
 
-class BotInfo;
+struct BotInfo;
 
 class EditBotDialog : public AddBotDialog
 {
