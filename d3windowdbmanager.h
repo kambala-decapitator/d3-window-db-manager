@@ -48,10 +48,11 @@ private slots:
     void selectDBPath();
 
     void startAllBots();
+    void addBot();
+
     void startSelectedBot();
     void loginSelectedBot();
-
-    void addBot();
+    void launchDbForSelectedBot();
     void editSelectedBot();
     void renameSelectedBot();
     void deleteSelectedBot();
@@ -88,6 +89,9 @@ private:
     void startGames(int n);
     void startDemonbuddies();
     void startDemonbuddy(int botIndex, int pidIndex);
+
+    bool isBotEnabledAt(int i) const;
+    void createTreeItemFromBot(const BotInfo &bot);
 };
 
 #endif // D3WINDOWDBMANAGER_H

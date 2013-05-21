@@ -251,6 +251,11 @@
    </property>
    <column>
     <property name="text">
+     <string>Enabled</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
      <string>Name</string>
     </property>
    </column>
@@ -300,66 +305,17 @@
      <height>23</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Starts all enabled bots</string>
+   </property>
    <property name="text">
     <string>start all</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="editSelectedBotButton">
-   <property name="geometry">
-    <rect>
-     <x>300</x>
-     <y>250</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>edit...</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="startSelectedBotButton">
-   <property name="geometry">
-    <rect>
-     <x>300</x>
-     <y>220</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>start</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="loginSelectedBotButton">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>220</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>just login</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="deleteSelectedBotButton">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>250</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>delete...</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="useDelayCheckBox">
    <property name="geometry">
     <rect>
-     <x>100</x>
+     <x>271</x>
      <y>220</y>
      <width>176</width>
      <height>17</height>
@@ -372,8 +328,57 @@
     <string>Use delay between DB launches</string>
    </property>
   </widget>
+  <widget class="QSpinBox" name="delaySpinBox">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>245</y>
+     <width>42</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="value">
+    <number>10</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>311</x>
+     <y>250</y>
+     <width>81</width>
+     <height>13</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Delay (seconds):</string>
+   </property>
+  </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>useDelayCheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>delaySpinBox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>187</x>
+     <y>228</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>249</x>
+     <y>255</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

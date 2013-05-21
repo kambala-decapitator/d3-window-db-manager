@@ -123,10 +123,6 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
 
     connect(ui->startAllBotsButton,      SIGNAL(clicked()), SLOT(startAllBots()));
     connect(ui->addBotButton,            SIGNAL(clicked()), SLOT(addBot()));
-    connect(ui->startSelectedBotButton,  SIGNAL(clicked()), SLOT(startSelectedBot()));
-    connect(ui->loginSelectedBotButton,  SIGNAL(clicked()), SLOT(loginSelectedBot()));
-    connect(ui->editSelectedBotButton,   SIGNAL(clicked()), SLOT(editSelectedBot()));
-    connect(ui->deleteSelectedBotButton, SIGNAL(clicked()), SLOT(deleteSelectedBot()));
 
     connect(ui->botsTreeWidget, SIGNAL(doubleClicked(QModelIndex)), SLOT(startBotWithIndex(QModelIndex)));
     connect(ui->botsTreeWidget, SIGNAL(customContextMenuRequested(QPoint)), SLOT(showBotContextMenu(QPoint)));
@@ -298,7 +294,23 @@ void D3WindowDBManager::startAllBots()
     _shouldStartDemonbuddy = true;
     _justLogin = false;
     _pids.clear();
-    startGames(ui->botsTreeWidget->topLevelItemCount());
+
+    int enabledBots = 0;
+    for (int i = 0; i < ui->botsTreeWidget->topLevelItemCount(); ++i)
+        if (isBotEnabledAt(i))
+            ++enabledBots;
+    startGames(enabledBots);
+}
+
+void D3WindowDBManager::addBot()
+{
+    AddBotDialog dlg(ui->dbPathLineEdit->text(), this);
+    if (dlg.exec())
+    {
+        BotInfo bot = dlg.botInfo();
+        _bots << bot;
+        createTreeItemFromBot(bot);
+    }
 }
 
 void D3WindowDBManager::startSelectedBot()
@@ -320,15 +332,9 @@ void D3WindowDBManager::loginSelectedBot()
     }
 }
 
-void D3WindowDBManager::addBot()
+void D3WindowDBManager::launchDbForSelectedBot()
 {
-    AddBotDialog dlg(ui->dbPathLineEdit->text(), this);
-    if (dlg.exec())
-    {
-        BotInfo bot = dlg.botInfo();
-        _bots << bot;
-        /*QTreeWidgetItem *newBotItem = */new QTreeWidgetItem(ui->botsTreeWidget, QStringList() << bot.name << bot.email << QFileInfo(bot.profilePath).baseName());
-    }
+    startDemonbuddy(ui->botsTreeWidget->currentIndex().row(), -1);
 }
 
 void D3WindowDBManager::editSelectedBot()
@@ -349,8 +355,8 @@ void D3WindowDBManager::editSelectedBot()
         _bots.replace(botIndex, newBot);
 
         QTreeWidgetItem *botItem = ui->botsTreeWidget->currentItem();
-        botItem->setText(1, newBot.email);
-        botItem->setText(2, QFileInfo(newBot.profilePath).baseName());
+        botItem->setText(2, newBot.email);
+        botItem->setText(3, QFileInfo(newBot.profilePath).baseName());
     }
 }
 
@@ -361,7 +367,7 @@ void D3WindowDBManager::renameSelectedBot()
     if (!newName.isEmpty() && oldName != newName)
     {
         _bots[ui->botsTreeWidget->currentIndex().row()].name = newName;
-        ui->botsTreeWidget->currentItem()->setText(0, newName);
+        ui->botsTreeWidget->currentItem()->setText(1, newName);
     }
 }
 
@@ -396,6 +402,9 @@ void D3WindowDBManager::showBotContextMenu(const QPoint &p)
         QAction *loginAction = new QAction(tr("Just login"), ui->botsTreeWidget);
         connect(loginAction, SIGNAL(triggered()), SLOT(loginSelectedBot()));
 
+        QAction *launchDbAction = new QAction(tr("Launch Demonbuddy"), ui->botsTreeWidget);
+        connect(launchDbAction, SIGNAL(triggered()), SLOT(launchDbForSelectedBot()));
+
         QAction *separator = new QAction(ui->botsTreeWidget);
         separator->setSeparator(true);
 
@@ -411,7 +420,8 @@ void D3WindowDBManager::showBotContextMenu(const QPoint &p)
         QAction *deleteAction = new QAction(tr("Delete"), ui->botsTreeWidget);
         connect(deleteAction, SIGNAL(triggered()), SLOT(deleteSelectedBot()));
 
-        QMenu::exec(QList<QAction *>() << startAction << loginAction << separator << editAction << renameAction << separator2 << deleteAction, ui->botsTreeWidget->viewport()->mapToGlobal(p));
+        QMenu::exec(QList<QAction *>() << startAction << loginAction << launchDbAction << separator << editAction << renameAction << separator2 << deleteAction,
+                    ui->botsTreeWidget->viewport()->mapToGlobal(p));
     }
 }
 
@@ -477,6 +487,7 @@ void D3WindowDBManager::loadSettings()
     ui->dbPathLineEdit->setText(settings.value("dbPath").toString());
 
     ui->useDelayCheckBox->setChecked(settings.value("useDelay").toBool());
+    ui->delaySpinBox->setValue(settings.value("delay", 10).toInt());
 
     int n = settings.beginReadArray("bots");
     for (int i = 0; i < n; ++i)
@@ -493,8 +504,9 @@ void D3WindowDBManager::loadSettings()
         bot.noflash = settings.value("noflash", true).toBool();
         bot.autostart = settings.value("autostart", true).toBool();
         bot.noupdate = settings.value("noupdate", true).toBool();
+        bot.enabled = settings.value("enabled", true).toBool();
         _bots << bot;
-        /*QTreeWidgetItem *newBotItem = */new QTreeWidgetItem(ui->botsTreeWidget, QStringList() << bot.name << bot.email << QFileInfo(bot.profilePath).baseName());
+        createTreeItemFromBot(bot);
     }
     settings.endArray();
 
@@ -513,6 +525,7 @@ void D3WindowDBManager::saveSettings() const
     settings.setValue("dbPath", ui->dbPathLineEdit->text());
 
     settings.setValue("useDelay", ui->useDelayCheckBox->isChecked());
+    settings.setValue("delay", ui->delaySpinBox->value());
 
     settings.beginWriteArray("bots");
     for (int i = 0; i < _bots.size(); ++i)
@@ -529,13 +542,17 @@ void D3WindowDBManager::saveSettings() const
         settings.setValue("noflash",   bot.noflash);
         settings.setValue("autostart", bot.autostart);
         settings.setValue("noupdate",  bot.noupdate);
+        settings.setValue("enabled",   isBotEnabledAt(i));
     }
     settings.endArray();
 }
 
 void D3WindowDBManager::startGames(int n)
 {
-    _d3StarterProc.start("D3Starter.exe", QStringList() << (d3Path() + kD3ExeName) << QString::number(n), QIODevice::ReadOnly);
+    if (n)
+        _d3StarterProc.start("D3Starter.exe", QStringList() << (d3Path() + kD3ExeName) << QString::number(n), QIODevice::ReadOnly);
+    else
+        QMessageBox::warning(this, qApp->applicationName(), tr("Nothing to launch"));
 }
 
 void D3WindowDBManager::startDemonbuddies()
@@ -546,25 +563,29 @@ void D3WindowDBManager::startDemonbuddies()
         _startedBotIndex = QModelIndex();
     }
     else
-        for (int i = 0; i < _pids.size(); ++i)
+        for (int i = 0, j = 0; i < ui->botsTreeWidget->topLevelItemCount(); ++i)
         {
-            startDemonbuddy(i, i);
+            if (isBotEnabledAt(i))
+                startDemonbuddy(i, j++);
             if (ui->useDelayCheckBox->isChecked())
-                Sleep(10000);
+                Sleep(ui->delaySpinBox->value() * 1000);
         }
 }
 
 void D3WindowDBManager::startDemonbuddy(int botIndex, int pidIndex)
 {
     const BotInfo &bot = _bots.at(botIndex);
-    QStringList params = QStringList() << "-YarEnableAll" << "-routine=Trinity" << "-pid=" + QString::number(_pids.at(pidIndex)) << "-key=" + bot.dbKey
-                                       << "-bnetaccount=" + bot.email << "-bnetpassword=" + bot.password << "-profile=" + bot.profilePath;
+    QStringList params = QStringList() << "-routine=Trinity" << "-key=" + bot.dbKey << "-profile=" + bot.profilePath
+                                       << "-bnetaccount=" + bot.email << "-bnetpassword=" + bot.password << "-YarEnableAll";
+    if (pidIndex > -1)
+        params << "-pid=" + QString::number(_pids.at(pidIndex));
     if (bot.autostart || _justLogin)
         params << "-autostart";
     if (bot.noflash)
         params << "-noflash";
     if (bot.noupdate)
         params << "-noupdate";
+
     if (_justLogin)
     {
         _loginDemonbuddyProc.start(bot.dbPath, params, QIODevice::ReadOnly);
@@ -572,4 +593,19 @@ void D3WindowDBManager::startDemonbuddy(int botIndex, int pidIndex)
     }
     else
         QProcess::startDetached(bot.dbPath, params);
+}
+
+bool D3WindowDBManager::isBotEnabledAt(int i) const
+{
+    return ui->botsTreeWidget->topLevelItem(i)->data(0, Qt::CheckStateRole) == Qt::Checked;
+}
+
+void D3WindowDBManager::createTreeItemFromBot(const BotInfo &bot)
+{
+    QTreeWidgetItem *newBotItem = new QTreeWidgetItem(ui->botsTreeWidget);
+    newBotItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable);
+    newBotItem->setData(0, Qt::CheckStateRole, bot.enabled ? Qt::Checked : Qt::Unchecked);
+    newBotItem->setText(1, bot.name);
+    newBotItem->setText(2, bot.email);
+    newBotItem->setText(3, QFileInfo(bot.profilePath).baseName());
 }
