@@ -53,6 +53,7 @@ private slots:
     void startSelectedBot();
     void loginSelectedBot();
     void launchDbForSelectedBot();
+    void copyEmailOfSelectedBot();
     void editSelectedBot();
     void renameSelectedBot();
     void deleteSelectedBot();
@@ -92,6 +93,8 @@ private:
 
     bool isBotEnabledAt(int i) const;
     void createTreeItemFromBot(const BotInfo &bot);
+
+    void createLayout();
 };
 
 #endif // D3WINDOWDBMANAGER_H

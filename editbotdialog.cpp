@@ -3,10 +3,6 @@
 #include "botinfo.h"
 
 
-EditBotDialog::EditBotDialog(const QString &defaultDBPath, QWidget *parent) : AddBotDialog(defaultDBPath, parent)
-{
-}
-
 void EditBotDialog::setBotInfo(const BotInfo &bot)
 {
     ui->emailLineEdit->setText(bot.email);

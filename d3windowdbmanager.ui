@@ -35,6 +35,12 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
   </widget>
   <widget class="QPushButton" name="highlightButton">
    <property name="geometry">
@@ -49,7 +55,7 @@
     <string>highlight</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label">
+  <widget class="QLabel" name="windowsPerRowLabel">
    <property name="geometry">
     <rect>
      <x>322</x>
@@ -60,6 +66,9 @@
    </property>
    <property name="text">
     <string>windows per row:</string>
+   </property>
+   <property name="buddy">
+    <cstring>windowsPerRowSpinBox</cstring>
    </property>
   </widget>
   <widget class="QPushButton" name="restoreButton">
@@ -120,7 +129,7 @@
     <number>3</number>
    </property>
   </widget>
-  <widget class="QLabel" name="label_2">
+  <widget class="QLabel" name="d3PathLabel">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -131,6 +140,9 @@
    </property>
    <property name="text">
     <string>D3 folder path</string>
+   </property>
+   <property name="buddy">
+    <cstring>d3PathLineEdit</cstring>
    </property>
   </widget>
   <widget class="QLineEdit" name="d3PathLineEdit">
@@ -214,7 +226,7 @@
     <string>Browse...</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_3">
+  <widget class="QLabel" name="dbPathLabel">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -225,6 +237,9 @@
    </property>
    <property name="text">
     <string>default Demonbuddy.exe path</string>
+   </property>
+   <property name="buddy">
+    <cstring>dbPathLineEdit</cstring>
    </property>
   </widget>
   <widget class="QLineEdit" name="dbPathLineEdit">
@@ -283,19 +298,6 @@
     <string>add bot...</string>
    </property>
   </widget>
-  <widget class="Line" name="line">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>200</y>
-     <width>441</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
-   </property>
-  </widget>
   <widget class="QPushButton" name="startAllBotsButton">
    <property name="geometry">
     <rect>
@@ -315,9 +317,9 @@
   <widget class="QCheckBox" name="useDelayCheckBox">
    <property name="geometry">
     <rect>
-     <x>271</x>
-     <y>220</y>
-     <width>176</width>
+     <x>216</x>
+     <y>250</y>
+     <width>180</width>
      <height>17</height>
     </rect>
    </property>
@@ -325,20 +327,23 @@
     <string>Useful when using single Demonbuddy folder for all bots</string>
    </property>
    <property name="text">
-    <string>Use delay between DB launches</string>
+    <string>Use delay between DB launches:</string>
    </property>
   </widget>
-  <widget class="QSpinBox" name="delaySpinBox">
+  <widget class="QSpinBox" name="differentDbLaunchDelaySpinBox">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>245</y>
-     <width>42</width>
-     <height>22</height>
+     <y>250</y>
+     <width>56</width>
+     <height>20</height>
     </rect>
+   </property>
+   <property name="suffix">
+    <string> sec.</string>
    </property>
    <property name="minimum">
     <number>1</number>
@@ -347,17 +352,39 @@
     <number>10</number>
    </property>
   </widget>
-  <widget class="QLabel" name="label_4">
+  <widget class="QLabel" name="gameDbLaunchDelayLabel">
    <property name="geometry">
     <rect>
-     <x>311</x>
-     <y>250</y>
-     <width>81</width>
+     <x>196</x>
+     <y>224</y>
+     <width>197</width>
      <height>13</height>
     </rect>
    </property>
    <property name="text">
-    <string>Delay (seconds):</string>
+    <string>DB launch delay after launching game(s):</string>
+   </property>
+   <property name="buddy">
+    <cstring>gameDbLaunchDelaySpinBox</cstring>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="gameDbLaunchDelaySpinBox">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>220</y>
+     <width>56</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="suffix">
+    <string> sec.</string>
+   </property>
+   <property name="minimum">
+    <number>10</number>
+   </property>
+   <property name="value">
+    <number>20</number>
    </property>
   </widget>
  </widget>
@@ -367,7 +394,7 @@
   <connection>
    <sender>useDelayCheckBox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>delaySpinBox</receiver>
+   <receiver>differentDbLaunchDelaySpinBox</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">

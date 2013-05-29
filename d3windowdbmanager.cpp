@@ -9,6 +9,10 @@
 #include <QCloseEvent>
 #include <QMenu>
 #include <QInputDialog>
+#include <QClipboard>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 
 #include <QUrl>
 #include <QSettings>
@@ -27,7 +31,7 @@
 #  define QSTRING_TO_LPCWSTR(s)   s.utf16()
 #endif
 
-static const int kMaxStringLength = 50, kWaitAfterLaunchMsec = 25000;
+static const int kMaxStringLength = 50;
 
 
 class EnumWindowsHelper
@@ -105,8 +109,14 @@ const QString D3WindowDBManager::kD3ExeName("Diablo III.exe");
 D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new Ui::D3WindowDBManagerClass), _justLogin(false)
 {
     ui->setupUi(this);
+    createLayout();
 
     loadSettings();
+    if (ui->d3PathLineEdit->text().isEmpty())
+    {
+        QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
+        ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
+    }
 
     connect(ui->startD3Button,       SIGNAL(clicked()), SLOT(startGame()));
     connect(ui->startLauncherButton, SIGNAL(clicked()), SLOT(startLauncher()));
@@ -129,12 +139,6 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
 
     connect(&_d3StarterProc, SIGNAL(readyReadStandardOutput()), SLOT(readD3StarterOutput()));
     connect(&_loginDemonbuddyTimer, SIGNAL(timeout()), SLOT(findNewDemonbuddyWindow()));
-
-    if (ui->d3PathLineEdit->text().isEmpty())
-    {
-        QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
-        ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
-    }
 
     EnumWindowsHelper::d3WindowDBManager = this;
     buildWindowList();
@@ -189,7 +193,7 @@ void D3WindowDBManager::readD3StarterOutput()
     {
         _d3StarterProc.close();
 
-        QTimer::singleShot(kWaitAfterLaunchMsec, this, SLOT(tileAndLaunchDb()));
+        QTimer::singleShot(ui->gameDbLaunchDelaySpinBox->value() * 1000, this, SLOT(tileAndLaunchDb()));
     }
 }
 
@@ -337,6 +341,11 @@ void D3WindowDBManager::launchDbForSelectedBot()
     startDemonbuddy(ui->botsTreeWidget->currentIndex().row(), -1);
 }
 
+void D3WindowDBManager::copyEmailOfSelectedBot()
+{
+    qApp->clipboard()->setText(_bots.at(ui->botsTreeWidget->currentIndex().row()).email);
+}
+
 void D3WindowDBManager::editSelectedBot()
 {
     int botIndex = ui->botsTreeWidget->currentIndex().row();
@@ -356,7 +365,7 @@ void D3WindowDBManager::editSelectedBot()
 
         QTreeWidgetItem *botItem = ui->botsTreeWidget->currentItem();
         botItem->setText(2, newBot.email);
-        botItem->setText(3, QFileInfo(newBot.profilePath).baseName());
+        botItem->setText(3, QFileInfo(newBot.profilePath).completeBaseName());
     }
 }
 
@@ -408,19 +417,22 @@ void D3WindowDBManager::showBotContextMenu(const QPoint &p)
         QAction *separator = new QAction(ui->botsTreeWidget);
         separator->setSeparator(true);
 
+        QAction *copyEmailAction = new QAction(tr("Copy E-mail"), ui->botsTreeWidget);
+        connect(copyEmailAction, SIGNAL(triggered()), SLOT(copyEmailOfSelectedBot()));
+
+        QAction *separator2 = new QAction(ui->botsTreeWidget);
+        separator2->setSeparator(true);
+
         QAction *editAction = new QAction(tr("Edit"), ui->botsTreeWidget);
         connect(editAction, SIGNAL(triggered()), SLOT(editSelectedBot()));
 
         QAction *renameAction = new QAction(tr("Rename"), ui->botsTreeWidget);
         connect(renameAction, SIGNAL(triggered()), SLOT(renameSelectedBot()));
 
-        QAction *separator2 = new QAction(ui->botsTreeWidget);
-        separator2->setSeparator(true);
-
         QAction *deleteAction = new QAction(tr("Delete"), ui->botsTreeWidget);
         connect(deleteAction, SIGNAL(triggered()), SLOT(deleteSelectedBot()));
 
-        QMenu::exec(QList<QAction *>() << startAction << loginAction << launchDbAction << separator << editAction << renameAction << separator2 << deleteAction,
+        QMenu::exec(QList<QAction *>() << startAction << loginAction << launchDbAction << separator << copyEmailAction << separator2 << editAction << renameAction << deleteAction,
                     ui->botsTreeWidget->viewport()->mapToGlobal(p));
     }
 }
@@ -475,19 +487,17 @@ void D3WindowDBManager::shrinkWindowWithIndex(int windowIndex) const
 void D3WindowDBManager::loadSettings()
 {
     QSettings settings(AddBotDialog::settingsPath(), QSettings::IniFormat);
-    QVariant v = settings.value("d3Instances");
-    if (v.isValid())
-        ui->d3InstancesSpinBox->setValue(v.toInt());
+    restoreGeometry(settings.value("geometry").toByteArray());
 
-    v = settings.value("windowsPerRow");
-    if (v.isValid())
-        ui->windowsPerRowSpinBox->setValue(v.toInt());
+    ui->d3InstancesSpinBox->setValue(settings.value("d3Instances", 3).toInt());
+    ui->windowsPerRowSpinBox->setValue(settings.value("windowsPerRow", 3).toInt());
 
     ui->d3PathLineEdit->setText(settings.value("d3Path").toString());
     ui->dbPathLineEdit->setText(settings.value("dbPath").toString());
 
     ui->useDelayCheckBox->setChecked(settings.value("useDelay").toBool());
-    ui->delaySpinBox->setValue(settings.value("delay", 10).toInt());
+    ui->differentDbLaunchDelaySpinBox->setValue(settings.value("differentDbDelay", 10).toInt());
+    ui->gameDbLaunchDelaySpinBox->setValue(settings.value("gameDbDelay", 20).toInt());
 
     int n = settings.beginReadArray("bots");
     for (int i = 0; i < n; ++i)
@@ -518,6 +528,8 @@ void D3WindowDBManager::loadSettings()
 void D3WindowDBManager::saveSettings() const
 {
     QSettings settings(AddBotDialog::settingsPath(), QSettings::IniFormat);
+    settings.setValue("geometry", saveGeometry());
+
     settings.setValue("d3Instances",   ui->d3InstancesSpinBox->value());
     settings.setValue("windowsPerRow", ui->windowsPerRowSpinBox->value());
 
@@ -525,7 +537,8 @@ void D3WindowDBManager::saveSettings() const
     settings.setValue("dbPath", ui->dbPathLineEdit->text());
 
     settings.setValue("useDelay", ui->useDelayCheckBox->isChecked());
-    settings.setValue("delay", ui->delaySpinBox->value());
+    settings.setValue("differentDbDelay", ui->differentDbLaunchDelaySpinBox->value());
+    settings.setValue("gameDbDelay", ui->gameDbLaunchDelaySpinBox->value());
 
     settings.beginWriteArray("bots");
     for (int i = 0; i < _bots.size(); ++i)
@@ -568,7 +581,7 @@ void D3WindowDBManager::startDemonbuddies()
             if (isBotEnabledAt(i))
                 startDemonbuddy(i, j++);
             if (ui->useDelayCheckBox->isChecked())
-                Sleep(ui->delaySpinBox->value() * 1000);
+                Sleep(ui->differentDbLaunchDelaySpinBox->value() * 1000);
         }
 }
 
@@ -607,5 +620,66 @@ void D3WindowDBManager::createTreeItemFromBot(const BotInfo &bot)
     newBotItem->setData(0, Qt::CheckStateRole, bot.enabled ? Qt::Checked : Qt::Unchecked);
     newBotItem->setText(1, bot.name);
     newBotItem->setText(2, bot.email);
-    newBotItem->setText(3, QFileInfo(bot.profilePath).baseName());
+    newBotItem->setText(3, QFileInfo(bot.profilePath).completeBaseName());
+}
+
+void D3WindowDBManager::createLayout()
+{
+    QGroupBox *launchGameBox = new QGroupBox(tr("Game"), this);
+    QHBoxLayout *hbl = new QHBoxLayout(launchGameBox);
+    hbl->addWidget(ui->startD3Button);
+    hbl->addWidget(ui->d3InstancesSpinBox);
+    hbl->addStretch();
+    hbl->addWidget(ui->startLauncherButton);
+
+    QGroupBox *windowsBox = new QGroupBox(tr("Windows"), this);
+    QVBoxLayout *vbl = new QVBoxLayout(windowsBox);
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->buildWndListButton);
+    hbl->addWidget(ui->tileButton);
+    hbl->addStretch();
+    hbl->addWidget(ui->windowsPerRowLabel);
+    hbl->addWidget(ui->windowsPerRowSpinBox);
+    vbl->addLayout(hbl);
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->windowsComboBox);
+    hbl->addWidget(ui->shrinkButton);
+    hbl->addWidget(ui->restoreButton);
+    hbl->addWidget(ui->highlightButton);
+    vbl->addLayout(hbl);
+
+    QGroupBox *pathsBox = new QGroupBox(tr("Paths"), this);
+    vbl = new QVBoxLayout(pathsBox);
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->d3PathLabel);
+    hbl->addWidget(ui->d3PathLineEdit);
+    hbl->addWidget(ui->selectD3PathButton);
+    vbl->addLayout(hbl);
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->dbPathLabel);
+    hbl->addWidget(ui->dbPathLineEdit);
+    hbl->addWidget(ui->selectDBPathButton);
+    vbl->addLayout(hbl);
+
+    QGroupBox *botsBox = new QGroupBox(tr("Bots"), this);
+    vbl = new QVBoxLayout(botsBox);
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->startAllBotsButton);
+    hbl->addStretch();
+    hbl->addWidget(ui->gameDbLaunchDelayLabel);
+    hbl->addWidget(ui->gameDbLaunchDelaySpinBox);
+    vbl->addLayout(hbl);
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->addBotButton);
+    hbl->addStretch();
+    hbl->addWidget(ui->useDelayCheckBox);
+    hbl->addWidget(ui->differentDbLaunchDelaySpinBox);
+    vbl->addLayout(hbl);
+    vbl->addWidget(ui->botsTreeWidget);
+
+    vbl = new QVBoxLayout(this);
+    vbl->addWidget(launchGameBox);
+    vbl->addWidget(windowsBox);
+    vbl->addWidget(pathsBox);
+    vbl->addWidget(botsBox);
 }
