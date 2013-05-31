@@ -24,10 +24,12 @@ public:
     D3WindowDBManager(QWidget *parent = 0);
     virtual ~D3WindowDBManager();
 
-    void addWindow(HWND hwnd) { _windows << hwnd; }
+    void addWindow(HWND hwnd) { _d3Windows << hwnd; }
 
     DWORD loginDemonbuddyPid() const;
     void terminateLoginDemonbuddyProc();
+
+    void renameD3WindowToBattleTag(const QString &btag, int dbPid);
 
 protected:
     void closeEvent(QCloseEvent *e);
@@ -69,10 +71,10 @@ private slots:
 private:
     Ui::D3WindowDBManagerClass *ui;
 
-    QList<HWND> _windows;
+    QList<HWND> _d3Windows;
     QProcess _d3StarterProc, _loginDemonbuddyProc;
     QList<BotInfo> _bots;
-    QList<int> _pids;
+    QList<int> _d3Pids, _dbPids;
     QModelIndex _startedBotIndex;
     bool _justLogin, _shouldStartDemonbuddy;
     QTimer _loginDemonbuddyTimer;
@@ -89,7 +91,7 @@ private:
 
     void startGames(int n);
     void startDemonbuddies();
-    void startDemonbuddy(int botIndex, int pidIndex);
+    void startDemonbuddy(int botIndex, int d3PidIndex);
 
     bool isBotEnabledAt(int i) const;
     void createTreeItemFromBot(const BotInfo &bot);

@@ -39,7 +39,7 @@ class EnumWindowsHelper
 public:
     static D3WindowDBManager *d3WindowDBManager;
 
-    static void startEnumWindows()
+    static void findD3Windows()
     {
         ::EnumWindows(EnumD3WindowsProc, 0);
     }
@@ -47,6 +47,11 @@ public:
     static void minimizeDemonbuddies()
     {
         ::EnumWindows(EnumDbWindowsProc, 0);
+    }
+
+    static void renameD3WindowsToBattleTag()
+    {
+        ::EnumWindows(EnumDbWindowsProc2, 0);
     }
 
     static void findNewDemonbuddyWindowByPid()
@@ -74,6 +79,19 @@ private:
         ::GetWindowText(hwnd, wndTitleWstr, kMaxStringLength);
         if (!wcscmp(wndTitleWstr, L"Demonbuddy") || isDemonbuddyLoggedInWindowTitle(wndTitleWstr))
             ::ShowWindow(hwnd, SW_SHOWMINNOACTIVE);
+        return TRUE;
+    }
+
+    static BOOL CALLBACK EnumDbWindowsProc2(_In_ HWND hwnd, _In_ LPARAM lParam)
+    {
+        Q_UNUSED(lParam);
+
+        WCHAR wndTitleWstr[kMaxStringLength];
+        ::GetWindowText(hwnd, wndTitleWstr, kMaxStringLength);
+
+        QRegExp re("DB - (.+\\#\\d+) - PID:(\\d+)");
+        if (re.indexIn(LPWSTR_TO_QSTRING(wndTitleWstr)) != -1)
+            d3WindowDBManager->renameD3WindowToBattleTag(re.cap(1), re.cap(2).toInt());
         return TRUE;
     }
 
@@ -114,8 +132,12 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
     loadSettings();
     if (ui->d3PathLineEdit->text().isEmpty())
     {
-        QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Diablo III\\", QSettings::NativeFormat);
-        ui->d3PathLineEdit->setText(s.value("InstallLocation").toString());
+        QString hklmSoftD3Path("Microsoft/Windows/CurrentVersion/Uninstall/Diablo III/InstallLocation");
+        QSettings s("HKEY_LOCAL_MACHINE\\SOFTWARE\\", QSettings::NativeFormat);
+        QVariant v = s.value("Wow6432Node/" + hklmSoftD3Path);
+        if (!v.isValid())
+            v = s.value(hklmSoftD3Path);
+        ui->d3PathLineEdit->setText(v.toString());
     }
 
     connect(ui->startD3Button,       SIGNAL(clicked()), SLOT(startGame()));
@@ -164,6 +186,32 @@ void D3WindowDBManager::terminateLoginDemonbuddyProc()
     _loginDemonbuddyProc.close();
 }
 
+void D3WindowDBManager::renameD3WindowToBattleTag(const QString &btag, int dbPid)
+{
+    int pidIndex = _dbPids.indexOf(dbPid);
+    if (pidIndex == -1)
+        return;
+
+    int d3Pid = _d3Pids.at(pidIndex);
+    HWND targetHwnd = 0;
+    foreach (HWND hwnd, _d3Windows)
+    {
+        DWORD pid;
+        ::GetWindowThreadProcessId(hwnd, &pid);
+        if (pid == d3Pid)
+        {
+            targetHwnd = hwnd;
+            break;
+        }
+    }
+    if (targetHwnd)
+    {
+        ::SetWindowText(targetHwnd, QSTRING_TO_LPCWSTR(btag));
+        _d3Pids.removeAt(pidIndex);
+        _dbPids.removeAt(pidIndex);
+    }
+}
+
 
 // protected methods
 
@@ -187,7 +235,7 @@ void D3WindowDBManager::readD3StarterOutput()
     QByteArray output = _d3StarterProc.readAllStandardOutput();
     QRegExp re("Process ID (\\d+) started");
     if (re.indexIn(output) != -1)
-        _pids << re.cap(1).toInt();
+        _d3Pids << re.cap(1).toInt();
 
     if (output.contains("All done!"))
     {
@@ -204,35 +252,35 @@ void D3WindowDBManager::startLauncher()
 
 void D3WindowDBManager::buildWindowList()
 {
-    _windows.clear();
-    EnumWindowsHelper::startEnumWindows();
+    _d3Windows.clear();
+    EnumWindowsHelper::findD3Windows();
 
     ui->windowsComboBox->clear();
-    int i = 1;
-    foreach (HWND hwnd, _windows)
+//    int i = 1;
+    foreach (HWND hwnd, _d3Windows)
     {
         WCHAR wndCaptionWstr[kMaxStringLength];
         ::GetWindowText(hwnd, wndCaptionWstr, kMaxStringLength);
 
-        QString caption = LPWSTR_TO_QSTRING(wndCaptionWstr), newCaption;
-        int underscoreIndex = caption.indexOf("_");
-        if (underscoreIndex != -1)
-            newCaption = caption.left(underscoreIndex + 1);
-        else
-            newCaption = caption + "_";
-        newCaption += QString::number(i++);
-        ::SetWindowText(hwnd, QSTRING_TO_LPCWSTR(newCaption));
+//        QString caption = LPWSTR_TO_QSTRING(wndCaptionWstr), newCaption;
+//        int underscoreIndex = caption.indexOf("_");
+//        if (underscoreIndex != -1)
+//            newCaption = caption.left(underscoreIndex + 1);
+//        else
+//            newCaption = caption + "_";
+//        newCaption += QString::number(i++);
+//        ::SetWindowText(hwnd, QSTRING_TO_LPCWSTR(newCaption));
 
         DWORD pid;
         ::GetWindowThreadProcessId(hwnd, &pid);
 
-        ui->windowsComboBox->addItem(QString("%1 (%2)").arg(newCaption).arg(pid));
+        ui->windowsComboBox->addItem(QString("%1 (PID: %2)").arg(LPWSTR_TO_QSTRING(wndCaptionWstr)).arg(pid));
     }
 }
 
 void D3WindowDBManager::tileWindows()
 {
-    for (int i = 0; i < _windows.size(); ++i)
+    for (int i = 0; i < _d3Windows.size(); ++i)
         shrinkWindowWithIndex(i);
 }
 
@@ -297,7 +345,7 @@ void D3WindowDBManager::startAllBots()
 {
     _shouldStartDemonbuddy = true;
     _justLogin = false;
-    _pids.clear();
+    _d3Pids.clear();
 
     int enabledBots = 0;
     for (int i = 0; i < ui->botsTreeWidget->topLevelItemCount(); ++i)
@@ -396,7 +444,7 @@ void D3WindowDBManager::deleteSelectedBot()
 void D3WindowDBManager::startBotWithIndex(const QModelIndex &index)
 {
     _shouldStartDemonbuddy = true;
-    _pids.clear();
+    _d3Pids.clear();
     _startedBotIndex = index;
     startGames(1);
 }
@@ -456,6 +504,12 @@ void D3WindowDBManager::tileAndLaunchDb()
 void D3WindowDBManager::minimizeDemonbuddies()
 {
     EnumWindowsHelper::minimizeDemonbuddies();
+    while (!_d3Pids.isEmpty())
+    {
+        EnumWindowsHelper::renameD3WindowsToBattleTag();
+        ::Sleep(2000);
+    }
+    buildWindowList();
 }
 
 void D3WindowDBManager::findNewDemonbuddyWindow()
@@ -468,7 +522,7 @@ void D3WindowDBManager::findNewDemonbuddyWindow()
 
 HWND D3WindowDBManager::currentWindow() const
 {
-    return _windows.at(ui->windowsComboBox->currentIndex());
+    return _d3Windows.at(ui->windowsComboBox->currentIndex());
 }
 
 QString D3WindowDBManager::d3Path() const
@@ -481,7 +535,7 @@ void D3WindowDBManager::shrinkWindowWithIndex(int windowIndex) const
     int windowsPerRow = ui->windowsPerRowSpinBox->value();
     int row = windowIndex / windowsPerRow, col = windowIndex % windowsPerRow;
     int w = screenWidth() / windowsPerRow, h = screenHeight() / windowsPerRow;
-    ::MoveWindow(_windows.at(windowIndex), col * w, row * h, w, h, FALSE);
+    ::MoveWindow(_d3Windows.at(windowIndex), col * w, row * h, w, h, FALSE);
 }
 
 void D3WindowDBManager::loadSettings()
@@ -576,22 +630,22 @@ void D3WindowDBManager::startDemonbuddies()
         _startedBotIndex = QModelIndex();
     }
     else
-        for (int i = 0, j = 0; i < ui->botsTreeWidget->topLevelItemCount(); ++i)
-        {
+        for (int i = 0, j = 0, n = ui->botsTreeWidget->topLevelItemCount(); i < n; ++i)
             if (isBotEnabledAt(i))
+            {
                 startDemonbuddy(i, j++);
-            if (ui->useDelayCheckBox->isChecked())
-                Sleep(ui->differentDbLaunchDelaySpinBox->value() * 1000);
-        }
+                if (ui->useDelayCheckBox->isChecked())
+                    ::Sleep(ui->differentDbLaunchDelaySpinBox->value() * 1000);
+            }
 }
 
-void D3WindowDBManager::startDemonbuddy(int botIndex, int pidIndex)
+void D3WindowDBManager::startDemonbuddy(int botIndex, int d3PidIndex)
 {
     const BotInfo &bot = _bots.at(botIndex);
     QStringList params = QStringList() << "-routine=Trinity" << "-key=" + bot.dbKey << "-profile=" + bot.profilePath
                                        << "-bnetaccount=" + bot.email << "-bnetpassword=" + bot.password << "-YarEnableAll";
-    if (pidIndex > -1)
-        params << "-pid=" + QString::number(_pids.at(pidIndex));
+    if (d3PidIndex > -1)
+        params << "-pid=" + QString::number(_d3Pids.at(d3PidIndex));
     if (bot.autostart || _justLogin)
         params << "-autostart";
     if (bot.noflash)
@@ -605,7 +659,11 @@ void D3WindowDBManager::startDemonbuddy(int botIndex, int pidIndex)
         _loginDemonbuddyTimer.start(2000);
     }
     else
-        QProcess::startDetached(bot.dbPath, params);
+    {
+        qint64 pid;
+        if (QProcess::startDetached(bot.dbPath, params, QString(), &pid) && d3PidIndex > -1)
+            _dbPids << pid;
+    }
 }
 
 bool D3WindowDBManager::isBotEnabledAt(int i) const
