@@ -50,7 +50,8 @@ private slots:
     void selectDBPath();
 
     void startAllBots();
-    void addBot();
+    void addNewBot();
+    void importBotsFromYar();
 
     void startSelectedBot();
     void loginSelectedBot();
@@ -67,6 +68,8 @@ private slots:
     void minimizeDemonbuddies();
 
     void findNewDemonbuddyWindow();
+
+    void about();
 
 private:
     Ui::D3WindowDBManagerClass *ui;

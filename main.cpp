@@ -5,6 +5,9 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    a.setOrganizationName("kambala");
+    a.setApplicationName("D3WindowDBManager");
+    a.setApplicationVersion(NVER_STRING);
 
     D3WindowDBManager w;
     w.show();

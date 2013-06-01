@@ -256,7 +256,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>281</y>
+     <y>250</y>
      <width>445</width>
      <height>171</height>
     </rect>
@@ -289,20 +289,20 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>250</y>
+     <y>219</y>
      <width>75</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
-    <string>add bot...</string>
+    <string>add bot(s)</string>
    </property>
   </widget>
   <widget class="QPushButton" name="startAllBotsButton">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>220</y>
+     <y>189</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -318,7 +318,7 @@
    <property name="geometry">
     <rect>
      <x>216</x>
-     <y>250</y>
+     <y>219</y>
      <width>180</width>
      <height>17</height>
     </rect>
@@ -337,7 +337,7 @@
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>250</y>
+     <y>219</y>
      <width>56</width>
      <height>20</height>
     </rect>
@@ -356,7 +356,7 @@
    <property name="geometry">
     <rect>
      <x>196</x>
-     <y>224</y>
+     <y>193</y>
      <width>197</width>
      <height>13</height>
     </rect>
@@ -372,7 +372,7 @@
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>220</y>
+     <y>189</y>
      <width>56</width>
      <height>20</height>
     </rect>
@@ -385,6 +385,35 @@
    </property>
    <property name="value">
     <number>20</number>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="aboutQtButton">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>430</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="aboutButton">
+   <property name="geometry">
+    <rect>
+     <x>380</x>
+     <y>430</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>About</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
    </property>
   </widget>
  </widget>

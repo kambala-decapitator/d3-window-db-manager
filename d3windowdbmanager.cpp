@@ -18,6 +18,7 @@
 #include <QSettings>
 #include <QTimer>
 #include <QRegExp>
+#include <QXmlStreamReader>
 
 #ifndef QT_NO_DEBUG
 #include <QDebug>
@@ -129,6 +130,11 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
     ui->setupUi(this);
     createLayout();
 
+    QMenu *addBotMenu = new QMenu(ui->addBotButton);
+    addBotMenu->addAction(tr("New..."), this, SLOT(addNewBot()));
+    addBotMenu->addAction(tr("Import from YAR..."), this, SLOT(importBotsFromYar()));
+    ui->addBotButton->setMenu(addBotMenu);
+
     loadSettings();
     if (ui->d3PathLineEdit->text().isEmpty())
     {
@@ -154,10 +160,12 @@ D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new 
     connect(ui->selectDBPathButton, SIGNAL(clicked()), SLOT(selectDBPath()));
 
     connect(ui->startAllBotsButton,      SIGNAL(clicked()), SLOT(startAllBots()));
-    connect(ui->addBotButton,            SIGNAL(clicked()), SLOT(addBot()));
 
     connect(ui->botsTreeWidget, SIGNAL(doubleClicked(QModelIndex)), SLOT(startBotWithIndex(QModelIndex)));
     connect(ui->botsTreeWidget, SIGNAL(customContextMenuRequested(QPoint)), SLOT(showBotContextMenu(QPoint)));
+
+    connect(ui->aboutButton,   SIGNAL(clicked()), SLOT(about()));
+    connect(ui->aboutQtButton, SIGNAL(clicked()), qApp, SLOT(aboutQt()));
 
     connect(&_d3StarterProc, SIGNAL(readyReadStandardOutput()), SLOT(readD3StarterOutput()));
     connect(&_loginDemonbuddyTimer, SIGNAL(timeout()), SLOT(findNewDemonbuddyWindow()));
@@ -256,26 +264,22 @@ void D3WindowDBManager::buildWindowList()
     EnumWindowsHelper::findD3Windows();
 
     ui->windowsComboBox->clear();
-//    int i = 1;
     foreach (HWND hwnd, _d3Windows)
     {
         WCHAR wndCaptionWstr[kMaxStringLength];
         ::GetWindowText(hwnd, wndCaptionWstr, kMaxStringLength);
-
-//        QString caption = LPWSTR_TO_QSTRING(wndCaptionWstr), newCaption;
-//        int underscoreIndex = caption.indexOf("_");
-//        if (underscoreIndex != -1)
-//            newCaption = caption.left(underscoreIndex + 1);
-//        else
-//            newCaption = caption + "_";
-//        newCaption += QString::number(i++);
-//        ::SetWindowText(hwnd, QSTRING_TO_LPCWSTR(newCaption));
 
         DWORD pid;
         ::GetWindowThreadProcessId(hwnd, &pid);
 
         ui->windowsComboBox->addItem(QString("%1 (PID: %2)").arg(LPWSTR_TO_QSTRING(wndCaptionWstr)).arg(pid));
     }
+
+    bool enableButton = ui->windowsComboBox->count() > 0;
+    ui->tileButton->setEnabled(enableButton);
+    ui->shrinkButton->setEnabled(enableButton);
+    ui->restoreButton->setEnabled(enableButton);
+    ui->highlightButton->setEnabled(enableButton);
 }
 
 void D3WindowDBManager::tileWindows()
@@ -354,7 +358,7 @@ void D3WindowDBManager::startAllBots()
     startGames(enabledBots);
 }
 
-void D3WindowDBManager::addBot()
+void D3WindowDBManager::addNewBot()
 {
     AddBotDialog dlg(ui->dbPathLineEdit->text(), this);
     if (dlg.exec())
@@ -362,6 +366,100 @@ void D3WindowDBManager::addBot()
         BotInfo bot = dlg.botInfo();
         _bots << bot;
         createTreeItemFromBot(bot);
+    }
+}
+
+void D3WindowDBManager::importBotsFromYar()
+{
+    QString yarBotsPath = QFileDialog::getOpenFileName(this, tr("Select YAR config file"), QString(), tr("XML files (*.xml)"));
+    if (!yarBotsPath.isEmpty())
+    {
+        QFile yarFile(yarBotsPath);
+        if (!yarFile.open(QIODevice::ReadOnly | QFile::Text))
+        {
+            QMessageBox::critical(this, qApp->applicationName(), tr("Error reading YAR config file.\nReason: %1").arg(yarFile.errorString()));
+            return;
+        }
+
+        QXmlStreamReader xmlReader(&yarFile);
+        xmlReader.readNextStartElement(); // ArrayOfBotClass
+        while (xmlReader.readNextStartElement()) // BotClass
+        {
+            BotInfo bot;
+            xmlReader.readNextStartElement(); // Name
+            bot.name = xmlReader.readElementText();
+            xmlReader.readNextStartElement(); // Description
+            if (bot.name.isEmpty())
+                bot.name = xmlReader.readElementText();
+            else
+                xmlReader.skipCurrentElement();
+
+            xmlReader.readNextStartElement(); // IsEnabled
+            bot.enabled = xmlReader.readElementText() == "true";
+
+            xmlReader.readNextStartElement(); // Demonbuddy
+            while (xmlReader.readNextStartElement())
+            {
+                if (xmlReader.name() == "Location")
+                    bot.dbPath = xmlReader.readElementText();
+                else if (xmlReader.name() == "Key")
+                    bot.dbKey = xmlReader.readElementText();
+                else if (xmlReader.name() == "NoFlash")
+                    bot.noflash = xmlReader.readElementText() == "true";
+                else if (xmlReader.name() == "NoUpdate")
+                    bot.noupdate = xmlReader.readElementText() == "true";
+                else
+                    xmlReader.skipCurrentElement();
+            }
+
+            xmlReader.readNextStartElement(); // Diablo
+            while (xmlReader.readNextStartElement())
+            {
+                if (xmlReader.name() == "Username")
+                    bot.email = xmlReader.readElementText();
+                else if (xmlReader.name() == "Password")
+                    bot.password = xmlReader.readElementText();
+                else
+                    xmlReader.skipCurrentElement();
+            }
+
+            xmlReader.readNextStartElement(); // Week
+            xmlReader.skipCurrentElement();
+
+            xmlReader.readNextStartElement(); // ProfileSchedule
+            while (xmlReader.readNextStartElement())
+            {
+                if (xmlReader.name() == "Profiles")
+                {
+                    while (xmlReader.readNextStartElement()) // Profiles
+                    {
+                        bool isFirst = true; // only the first profile is saved
+                        if (isFirst && xmlReader.name() == "Profile")
+                        {
+                            isFirst = false;
+                            while (xmlReader.readNextStartElement()) // Profiles
+                            {
+                                if (xmlReader.name() == "Location")
+                                    bot.profilePath = xmlReader.readElementText();
+                                else
+                                    xmlReader.skipCurrentElement();
+                            }
+                        }
+                        else
+                            xmlReader.skipCurrentElement();
+                    }
+                }
+                else
+                    xmlReader.skipCurrentElement();
+            }
+
+            // skip all advanced options
+            while (xmlReader.readNextStartElement())
+                xmlReader.skipCurrentElement();
+
+            _bots << bot;
+            createTreeItemFromBot(bot);
+        }
     }
 }
 
@@ -504,7 +602,9 @@ void D3WindowDBManager::tileAndLaunchDb()
 void D3WindowDBManager::minimizeDemonbuddies()
 {
     EnumWindowsHelper::minimizeDemonbuddies();
-    while (!_d3Pids.isEmpty())
+
+    int attempts = 0;
+    while (attempts++ < 20 && !_d3Pids.isEmpty())
     {
         EnumWindowsHelper::renameD3WindowsToBattleTag();
         ::Sleep(2000);
@@ -515,6 +615,18 @@ void D3WindowDBManager::minimizeDemonbuddies()
 void D3WindowDBManager::findNewDemonbuddyWindow()
 {
     EnumWindowsHelper::findNewDemonbuddyWindowByPid();
+}
+
+void D3WindowDBManager::about()
+{
+    QString appFullName = qApp->applicationName() + " v" + qApp->applicationVersion(), email("decapitator@ukr.net");;
+    QMessageBox::about(this, tr("About %1").arg(qApp->applicationName()), QString("<b>%1</b><br><br>").arg(appFullName) + tr("<i>Author:</i> Filipenkov Andrey (kambala)") +
+                       QString("<br><i>E-mail:</i> <a href=\"mailto:%1?subject=%2\">%1</a><br><br>").arg(email, appFullName) +
+                       tr("<b>Credits</b>:<ul>"
+                            "<li>Demonbuddy team for the great D3 bot</li>"
+                            "<li>guys that created YAR, D3Starter and MultiboxD.III</li>"
+                            "<li>and Blizzard for actually creating the game :)</li>"
+                          "</ul>"));
 }
 
 
@@ -619,7 +731,7 @@ void D3WindowDBManager::startGames(int n)
     if (n)
         _d3StarterProc.start("D3Starter.exe", QStringList() << (d3Path() + kD3ExeName) << QString::number(n), QIODevice::ReadOnly);
     else
-        QMessageBox::warning(this, qApp->applicationName(), tr("Nothing to launch"));
+        QMessageBox::warning(this, qApp->applicationName(), tr("No bots to start"));
 }
 
 void D3WindowDBManager::startDemonbuddies()
@@ -634,7 +746,7 @@ void D3WindowDBManager::startDemonbuddies()
             if (isBotEnabledAt(i))
             {
                 startDemonbuddy(i, j++);
-                if (ui->useDelayCheckBox->isChecked())
+                if (ui->useDelayCheckBox->isChecked() && i < n-1)
                     ::Sleep(ui->differentDbLaunchDelaySpinBox->value() * 1000);
             }
 }
@@ -735,9 +847,15 @@ void D3WindowDBManager::createLayout()
     vbl->addLayout(hbl);
     vbl->addWidget(ui->botsTreeWidget);
 
+    hbl = new QHBoxLayout;
+    hbl->addWidget(ui->aboutQtButton);
+    hbl->addStretch();
+    hbl->addWidget(ui->aboutButton);
+
     vbl = new QVBoxLayout(this);
     vbl->addWidget(launchGameBox);
     vbl->addWidget(windowsBox);
     vbl->addWidget(pathsBox);
     vbl->addWidget(botsBox);
+    vbl->addLayout(hbl);
 }
