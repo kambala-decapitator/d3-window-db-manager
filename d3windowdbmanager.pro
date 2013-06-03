@@ -38,3 +38,5 @@ RESOURCES += d3windowdbmanager.qrc
 
 LIBS += -luser32 \
         -lgdi32
+
+RC_FILE = resources/d3windowdbmanager.rc
