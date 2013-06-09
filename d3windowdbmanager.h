@@ -13,6 +13,9 @@
 
 
 namespace Ui { class D3WindowDBManagerClass; }
+class QGroupBox;
+
+class QTranslator;
 
 class D3WindowDBManager : public QWidget
 {
@@ -33,6 +36,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *e);
+    void changeEvent(QEvent *e);
 
 private slots:
     void startGame();
@@ -69,6 +73,7 @@ private slots:
 
     void findNewDemonbuddyWindow();
 
+    void switchLanguage(QAction *action, bool ignoreLocaleCheck = false);
     void about();
 
 private:
@@ -81,6 +86,11 @@ private:
     QModelIndex _startedBotIndex;
     bool _justLogin, _shouldStartDemonbuddy;
     QTimer _loginDemonbuddyTimer;
+    QTranslator *_appTranslator, *_qtTranslator;
+    QString _lastLocale;
+
+    QGroupBox *_launchGameBox, *_windowsBox, *_pathsBox, *_botsBox;
+    QAction *_addNewBotAction, *_importBotsFromYarAction;
 
     HWND currentWindow() const;
     int screenWidth()  const { return ::GetSystemMetrics(SM_CXSCREEN); }
@@ -100,6 +110,10 @@ private:
     void createTreeItemFromBot(const BotInfo &bot);
 
     void createLayout();
+    void retranslateUi();
+    void createLanguageMenu();
+
+    QString translationsPath() const;
 };
 
 #endif // D3WINDOWDBMANAGER_H

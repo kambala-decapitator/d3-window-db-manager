@@ -11,19 +11,19 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>D3WindowDBManager</string>
+   <string notr="true">D3WindowDBManager</string>
   </property>
   <widget class="QPushButton" name="buildWndListButton">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>40</y>
-     <width>95</width>
+     <width>75</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
-    <string>rebuild window list</string>
+    <string>rebuild list</string>
    </property>
   </widget>
   <widget class="QComboBox" name="windowsComboBox">
@@ -100,7 +100,7 @@
   <widget class="QPushButton" name="tileButton">
    <property name="geometry">
     <rect>
-     <x>110</x>
+     <x>90</x>
      <y>40</y>
      <width>75</width>
      <height>23</height>
@@ -390,7 +390,7 @@
   <widget class="QPushButton" name="aboutQtButton">
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>300</x>
      <y>430</y>
      <width>75</width>
      <height>23</height>
@@ -414,6 +414,19 @@
    </property>
    <property name="shortcut">
     <string>F1</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="langButton">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>430</y>
+     <width>75</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Language</string>
    </property>
   </widget>
  </widget>

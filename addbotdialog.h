@@ -35,6 +35,8 @@ protected:
     Ui::AddBotDialog *ui;
 
     QString _botName, _defaultDBPath;
+
+    void createLayout();
 };
 
 #endif // ADDBOTDIALOG_H

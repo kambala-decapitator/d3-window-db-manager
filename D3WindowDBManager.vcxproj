@@ -176,6 +176,10 @@
   <ItemGroup>
     <ResourceCompile Include="Resources\d3windowdbmanager.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\translations\d3windowdbmanager.ts" />
+    <None Include="Resources\translations\d3windowdbmanager_ru.ts" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

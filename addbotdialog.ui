@@ -64,7 +64,7 @@
     <string>password</string>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupBox">
+  <widget class="QGroupBox" name="dbPathGroupBox">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -196,7 +196,7 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QLabel" name="label">
+  <widget class="QLabel" name="profileLabel">
    <property name="geometry">
     <rect>
      <x>20</x>

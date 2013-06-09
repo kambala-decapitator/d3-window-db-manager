@@ -3,6 +3,9 @@
 
 #include <QInputDialog>
 #include <QFileDialog>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 
 #include <QSettings>
 #include <QDir>
@@ -29,6 +32,8 @@ AddBotDialog::AddBotDialog(const QString &defaultDBPath, QWidget *parent) : QDia
 {
     ui->setupUi(this);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+    createLayout();
+    adjustSize();
 
     ui->buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
 
@@ -111,4 +116,38 @@ void AddBotDialog::selectDBPath()
     selectDBPath(ui->customDBPathLineEdit);
     if (!ui->customDBPathLineEdit->text().isEmpty())
         ui->customDBPathRadioButton->setChecked(true);
+}
+
+
+// private methods
+
+void AddBotDialog::createLayout()
+{
+    QGridLayout *grid = new QGridLayout;
+    grid->addWidget(ui->emailLineEdit, 0, 0);
+    grid->addWidget(ui->passwordLineEdit, 1, 0);
+    grid->addWidget(ui->dbKeyLineEdit, 2, 0);
+    grid->addWidget(ui->noflashCheckBox, 0, 1);
+    grid->addWidget(ui->autostartCheckBox, 1, 1);
+    grid->addWidget(ui->noupdateCheckBox, 2, 1);
+
+    QHBoxLayout *profileLayout = new QHBoxLayout;
+    profileLayout->addWidget(ui->profileLabel);
+    profileLayout->addWidget(ui->profileLineEdit);
+    profileLayout->addWidget(ui->selectProfileButton);
+
+    QHBoxLayout *hbl = new QHBoxLayout;
+    hbl->addWidget(ui->customDBPathRadioButton);
+    hbl->addWidget(ui->customDBPathLineEdit);
+    hbl->addWidget(ui->selectDBPathButton);
+
+    QVBoxLayout *vbl = new QVBoxLayout(ui->dbPathGroupBox);
+    vbl->addWidget(ui->defaultDBPathRadioButton);
+    vbl->addLayout(hbl);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->addLayout(grid);
+    mainLayout->addLayout(profileLayout);
+    mainLayout->addWidget(ui->dbPathGroupBox);
+    mainLayout->addWidget(ui->buttonBox);
 }

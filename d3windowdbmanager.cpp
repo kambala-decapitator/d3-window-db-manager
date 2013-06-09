@@ -19,6 +19,7 @@
 #include <QTimer>
 #include <QRegExp>
 #include <QXmlStreamReader>
+#include <QTranslator>
 
 #ifndef QT_NO_DEBUG
 #include <QDebug>
@@ -125,17 +126,21 @@ const QString D3WindowDBManager::kD3ExeName("Diablo III.exe");
 
 // D3WindowDBManager ctor/dtor
 
-D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new Ui::D3WindowDBManagerClass), _justLogin(false)
+D3WindowDBManager::D3WindowDBManager(QWidget *parent) : QWidget(parent), ui(new Ui::D3WindowDBManagerClass), _justLogin(false), _appTranslator(0), _qtTranslator(0),
+    _launchGameBox(new QGroupBox(this)), _windowsBox(new QGroupBox(this)), _pathsBox(new QGroupBox(this)), _botsBox(new QGroupBox(this))
 {
     ui->setupUi(this);
     createLayout();
 
     QMenu *addBotMenu = new QMenu(ui->addBotButton);
-    addBotMenu->addAction(tr("New..."), this, SLOT(addNewBot()));
-    addBotMenu->addAction(tr("Import from YAR..."), this, SLOT(importBotsFromYar()));
+    _addNewBotAction = addBotMenu->addAction(QString(), this, SLOT(addNewBot()));
+    _importBotsFromYarAction = addBotMenu->addAction(QString(), this, SLOT(importBotsFromYar()));
     ui->addBotButton->setMenu(addBotMenu);
 
     loadSettings();
+    createLanguageMenu();
+    retranslateUi();
+
     if (ui->d3PathLineEdit->text().isEmpty())
     {
         QString hklmSoftD3Path("Microsoft/Windows/CurrentVersion/Uninstall/Diablo III/InstallLocation");
@@ -227,6 +232,17 @@ void D3WindowDBManager::closeEvent(QCloseEvent *e)
 {
     saveSettings();
     e->accept();
+}
+
+void D3WindowDBManager::changeEvent(QEvent *e)
+{
+    if (e->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+        retranslateUi();
+    }
+    else
+        QWidget::changeEvent(e);
 }
 
 
@@ -617,6 +633,31 @@ void D3WindowDBManager::findNewDemonbuddyWindow()
     EnumWindowsHelper::findNewDemonbuddyWindowByPid();
 }
 
+void D3WindowDBManager::switchLanguage(QAction *action, bool ignoreLocaleCheck)
+{
+    QString locale = action->data().toString();
+    if (!ignoreLocaleCheck)
+    {
+        if (_lastLocale == locale)
+            return;
+        _lastLocale = locale;
+    }
+
+    if (!_appTranslator)
+    {
+        _appTranslator = new QTranslator(this);
+        qApp->installTranslator(_appTranslator);
+    }
+    _appTranslator->load(qApp->applicationName() + "_" + locale, translationsPath());
+
+    if (!_qtTranslator)
+    {
+        _qtTranslator = new QTranslator(this);
+        qApp->installTranslator(_qtTranslator);
+    }
+    _qtTranslator->load("qt_" + locale, translationsPath());
+}
+
 void D3WindowDBManager::about()
 {
     QString appFullName = qApp->applicationName() + " v" + qApp->applicationVersion(), email("decapitator@ukr.net");;
@@ -653,7 +694,9 @@ void D3WindowDBManager::shrinkWindowWithIndex(int windowIndex) const
 void D3WindowDBManager::loadSettings()
 {
     QSettings settings(AddBotDialog::settingsPath(), QSettings::IniFormat);
+
     restoreGeometry(settings.value("geometry").toByteArray());
+    _lastLocale = settings.value("language", QLocale::system().name().left(2)).toString();
 
     ui->d3InstancesSpinBox->setValue(settings.value("d3Instances", 3).toInt());
     ui->windowsPerRowSpinBox->setValue(settings.value("windowsPerRow", 3).toInt());
@@ -686,15 +729,16 @@ void D3WindowDBManager::loadSettings()
     }
     settings.endArray();
 
-    ui->botsTreeWidget->resizeColumnToContents(0);
-    ui->botsTreeWidget->resizeColumnToContents(1);
-    ui->botsTreeWidget->resizeColumnToContents(2);
+    for (int i = 0; i < ui->botsTreeWidget->columnCount(); ++i)
+        ui->botsTreeWidget->resizeColumnToContents(i);
 }
 
 void D3WindowDBManager::saveSettings() const
 {
     QSettings settings(AddBotDialog::settingsPath(), QSettings::IniFormat);
+
     settings.setValue("geometry", saveGeometry());
+    settings.setValue("language", _lastLocale);
 
     settings.setValue("d3Instances",   ui->d3InstancesSpinBox->value());
     settings.setValue("windowsPerRow", ui->windowsPerRowSpinBox->value());
@@ -795,15 +839,13 @@ void D3WindowDBManager::createTreeItemFromBot(const BotInfo &bot)
 
 void D3WindowDBManager::createLayout()
 {
-    QGroupBox *launchGameBox = new QGroupBox(tr("Game"), this);
-    QHBoxLayout *hbl = new QHBoxLayout(launchGameBox);
+    QHBoxLayout *hbl = new QHBoxLayout(_launchGameBox);
     hbl->addWidget(ui->startD3Button);
     hbl->addWidget(ui->d3InstancesSpinBox);
     hbl->addStretch();
     hbl->addWidget(ui->startLauncherButton);
 
-    QGroupBox *windowsBox = new QGroupBox(tr("Windows"), this);
-    QVBoxLayout *vbl = new QVBoxLayout(windowsBox);
+    QVBoxLayout *vbl = new QVBoxLayout(_windowsBox);
     hbl = new QHBoxLayout;
     hbl->addWidget(ui->buildWndListButton);
     hbl->addWidget(ui->tileButton);
@@ -818,8 +860,7 @@ void D3WindowDBManager::createLayout()
     hbl->addWidget(ui->highlightButton);
     vbl->addLayout(hbl);
 
-    QGroupBox *pathsBox = new QGroupBox(tr("Paths"), this);
-    vbl = new QVBoxLayout(pathsBox);
+    vbl = new QVBoxLayout(_pathsBox);
     hbl = new QHBoxLayout;
     hbl->addWidget(ui->d3PathLabel);
     hbl->addWidget(ui->d3PathLineEdit);
@@ -831,8 +872,7 @@ void D3WindowDBManager::createLayout()
     hbl->addWidget(ui->selectDBPathButton);
     vbl->addLayout(hbl);
 
-    QGroupBox *botsBox = new QGroupBox(tr("Bots"), this);
-    vbl = new QVBoxLayout(botsBox);
+    vbl = new QVBoxLayout(_botsBox);
     hbl = new QHBoxLayout;
     hbl->addWidget(ui->startAllBotsButton);
     hbl->addStretch();
@@ -848,14 +888,80 @@ void D3WindowDBManager::createLayout()
     vbl->addWidget(ui->botsTreeWidget);
 
     hbl = new QHBoxLayout;
-    hbl->addWidget(ui->aboutQtButton);
+    hbl->addWidget(ui->langButton);
     hbl->addStretch();
+    hbl->addWidget(ui->aboutQtButton);
     hbl->addWidget(ui->aboutButton);
 
     vbl = new QVBoxLayout(this);
-    vbl->addWidget(launchGameBox);
-    vbl->addWidget(windowsBox);
-    vbl->addWidget(pathsBox);
-    vbl->addWidget(botsBox);
+    vbl->addWidget(_launchGameBox);
+    vbl->addWidget(_windowsBox);
+    vbl->addWidget(_pathsBox);
+    vbl->addWidget(_botsBox);
     vbl->addLayout(hbl);
+}
+
+void D3WindowDBManager::retranslateUi()
+{
+    _launchGameBox->setTitle(tr("Game"));
+    _windowsBox->setTitle(tr("Windows"));
+    _pathsBox->setTitle(tr("Paths"));
+    _botsBox->setTitle(tr("Bots"));
+
+    _addNewBotAction->setText(tr("New..."));
+    _importBotsFromYarAction->setText(tr("Import from YAR..."));
+}
+
+void D3WindowDBManager::createLanguageMenu()
+{
+    QStringList fileNames = QDir(translationsPath(), QString("%1_*.qm").arg(qApp->applicationName())).entryList(QDir::Files);
+    if (fileNames.isEmpty())
+    {
+        ui->langButton->setDisabled(true);
+        ui->langButton->setToolTip("No other languages found"); // no need to put it inside tr()
+        return;
+    }
+
+    QActionGroup *languageActionGroup = new QActionGroup(this);
+    connect(languageActionGroup, SIGNAL(triggered(QAction *)), SLOT(switchLanguage(QAction *)));
+
+    QMenu *languageMenu = new QMenu(ui->langButton);
+    ui->langButton->setMenu(languageMenu);
+
+    QString defaultLocale("en");
+    fileNames.prepend("_" + defaultLocale); // HACK: insert English language
+    foreach (const QString &fileName, fileNames)
+    {
+        QTranslator translator;
+        translator.load(fileName, translationsPath());
+
+        QString locale = fileName.mid(fileName.indexOf('_') + 1, 2), language = translator.translate("Language", "English", "Your language name");
+        if (language.isEmpty())
+            language = "English";
+
+        QAction *action = new QAction(language, this);
+        action->setCheckable(true);
+        action->setData(locale);
+        languageMenu->addAction(action);
+        languageActionGroup->addAction(action);
+
+        if (_lastLocale == locale)
+        {
+            action->setChecked(true);
+            if (locale != defaultLocale) // no need to create English translators
+                switchLanguage(action, true);
+        }
+    }
+
+    // select English by default
+    if (!languageActionGroup->checkedAction())
+    {
+        languageActionGroup->actions().at(0)->setChecked(true);
+        _lastLocale = defaultLocale;
+    }
+}
+
+QString D3WindowDBManager::translationsPath() const
+{
+    return qApp->applicationDirPath() + "/translations";
 }
