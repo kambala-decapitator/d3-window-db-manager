@@ -52,9 +52,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_d3windowdbmanager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\qrc_d3windowdbmanager.cpp">
-      <Filter>Generated Files</Filter>
-    </ClCompile>
     <ClCompile Include="addbotdialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -67,6 +64,9 @@
     <ClCompile Include="editbotdialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_d3windowdbmanager.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="d3windowdbmanager.h">
@@ -75,14 +75,14 @@
     <CustomBuild Include="d3windowdbmanager.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="d3windowdbmanager.qrc">
-      <Filter>Resource Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="addbotdialog.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="addbotdialog.ui">
       <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Resources\d3windowdbmanager.qrc">
+      <Filter>Resource Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

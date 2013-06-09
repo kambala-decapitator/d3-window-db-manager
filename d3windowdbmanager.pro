@@ -38,7 +38,7 @@ HEADERS += d3windowdbmanager.h \
 FORMS += d3windowdbmanager.ui \
          addbotdialog.ui
 
-RESOURCES += d3windowdbmanager.qrc
+RESOURCES += resources/d3windowdbmanager.qrc
 
 LIBS += -luser32 \
         -lgdi32
