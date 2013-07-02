@@ -8,7 +8,7 @@ CONFIG(release, debug|release): DEFINES += QT_NO_DEBUG_OUTPUT QT_NO_WARNING_OUTP
 
 # app version
 NVER1 = 1
-NVER2 = 0
+NVER2 = 1
 NVER3 = 0
 NVER4 = 0
 

@@ -349,7 +349,7 @@ void D3WindowDBManager::selectD3Path()
     QString d3Path = QFileDialog::getExistingDirectory(this, tr("Select D3 folder"), ui->d3PathLineEdit->text());
     if (!d3Path.isEmpty())
     {
-        if (QFile::exists(QString(d3Path + kD3ExeName)))
+        if (QFile::exists(QString(d3Path + QDir::separator() + kD3ExeName)))
             ui->d3PathLineEdit->setText(d3Path);
         else
             QMessageBox::critical(this, qApp->applicationName(), tr("This is not a D3 folder: \'%1\' is missing.", "param is D3 executable name").arg(kD3ExeName));
