@@ -661,13 +661,15 @@ void D3WindowDBManager::switchLanguage(QAction *action, bool ignoreLocaleCheck)
 void D3WindowDBManager::about()
 {
     QString appFullName = qApp->applicationName() + " v" + qApp->applicationVersion(), email("decapitator@ukr.net");;
-    QMessageBox::about(this, tr("About %1").arg(qApp->applicationName()), QString("<b>%1</b><br><br>").arg(appFullName) + tr("<i>Author:</i> Filipenkov Andrey (kambala)") +
-                       QString("<br><i>E-mail:</i> <a href=\"mailto:%1?subject=%2\">%1</a><br><br>").arg(email, appFullName) +
-                       tr("<b>Credits</b>:<ul>"
+    QMessageBox::about(this, tr("About %1").arg(qApp->applicationName()), QString("<b>%1</b><br><br>").arg(appFullName) + tr("<i>Author:</i> Filipenkov Andrey (kambala)")
+                       + QString("<br><i>E-mail:</i> <a href=\"mailto:%1?subject=%2\">%1</a><br><br>").arg(email, appFullName)
+                       + QString("<a href=\"http://www.thebuddyforum.com/demonbuddy-forum/plugins/122563-standalone-d3windowdbmanager-v1-0-simple-bot-window-manager.html\">%1</a><br>")
+                         .arg(tr("Demonbuddy Forum thread")) + "<a href=\"https://github.com/kambala-decapitator/d3-window-db-manager\">GitHub</a><br><br>"
+                       + tr("<b>Credits</b>:<ul>"
                             "<li>Demonbuddy team for the great D3 bot</li>"
                             "<li>guys that created YAR, D3Starter and MultiboxD.III</li>"
                             "<li>and Blizzard for actually creating the game :)</li>"
-                          "</ul>"));
+                            "</ul>"));
 }
 
 

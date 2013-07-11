@@ -4,8 +4,6 @@ TEMPLATE = app
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG(release, debug|release): DEFINES += QT_NO_DEBUG_OUTPUT QT_NO_WARNING_OUTPUT
-
 # app version
 NVER1 = 1
 NVER2 = 1
@@ -44,6 +42,30 @@ LIBS += -luser32 \
         -lgdi32
 
 RC_FILE = resources/d3windowdbmanager.rc
+OTHER_FILES += $$RC_FILE
 
 TRANSLATIONS += resources/translations/d3windowdbmanager_ru.ts \
                 resources/translations/d3windowdbmanager.ts
+
+# defines
+DEFINES += BUILDING_FROM_PRO \ # to set app version in .rc correctly
+           NOMINMAX
+
+CONFIG(release, debug|release): {
+    IS_RELEASE_BUILD = 1
+    DEFINES += QT_NO_DEBUG_OUTPUT \
+               QT_NO_WARNING_OUTPUT \
+               _USING_V110_SDK71_ # for WinXP support in MSVS2012
+}
+
+# custom actions
+defineReplace(toNativeSeparators) {
+    path = $$1
+    path ~= s,/,\\,g
+    return($$path)
+}
+
+isEmpty(IS_RELEASE_BUILD): OUT_FOLDER = debug
+                     else: OUT_FOLDER = release
+D3STARTER_DEST_PATH = $$OUT_PWD/$$OUT_FOLDER/D3Starter.exe
+!exists($$D3STARTER_DEST_PATH): QMAKE_POST_LINK = copy /B $$toNativeSeparators($$_PRO_FILE_PWD_/resources/D3Starter.exe) $$toNativeSeparators($$D3STARTER_DEST_PATH)

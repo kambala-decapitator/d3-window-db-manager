@@ -34,6 +34,7 @@ AddBotDialog::AddBotDialog(const QString &defaultDBPath, QWidget *parent) : QDia
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     createLayout();
     adjustSize();
+    setFixedHeight(height());
 
     ui->buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
 
